@@ -17,19 +17,18 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <!-- Version de build pour détection de mise à jour -->
-    <meta name="app-version" content="BUILD_VERSION">
+    <meta name="app-version" content="20260224013759">
     <script>
     (function() {
-        var V = 'BUILD_VERSION';
-        // Fallback si le workflow n'a pas encore remplacé le placeholder
-        // On teste si V ressemble à un vrai timestamp (14 chiffres)
-        if (!/^\d{14}$/.test(V)) { V = String(Date.now()); }
+        // Version fixe injectée au build — le workflow la met à jour à chaque push
+        // Sans workflow, changer ce nombre manuellement à chaque déploiement
+        var V = '20260224013759';
         window.__APP_V__ = V;
         var stored = localStorage.getItem('__catalogue_v__');
         if (stored && stored !== V) {
-            // Nouvelle version détectée → forcer rechargement depuis serveur
+            // Nouvelle version → forcer rechargement propre
             localStorage.setItem('__catalogue_v__', V);
-            window.location.reload(true);
+            window.location.replace(window.location.pathname);
             return;
         }
         localStorage.setItem('__catalogue_v__', V);

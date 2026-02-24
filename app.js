@@ -1115,25 +1115,26 @@ function renderSharedView(comedians, token) {
             });
 
             if (!role) {
-                // Retour admin normal
                 document.getElementById('adminNav').classList.remove('hidden');
                 document.getElementById('adminContent').classList.remove('hidden');
                 showAdminSection('users');
             } else if (role === 'studio' || role === 'manager') {
-                document.getElementById('studioContent').classList.remove('hidden');
-                applyFiltersStudio();
-                loadAbsences();
+                const sc = document.getElementById('studioContent');
+                if (sc) sc.classList.remove('hidden');
+                try { applyFiltersStudio(); } catch(e) { console.error('[preview studio] applyFiltersStudio:', e); }
+                try { loadAbsences(); }         catch(e) { console.error('[preview studio] loadAbsences:', e); }
             } else if (role === 'client') {
                 const cc = document.getElementById('clientContent');
                 if (cc) cc.classList.remove('hidden');
-                loadClientContent();
+                try { loadClientContent(); } catch(e) { console.error('[preview client] loadClientContent:', e); }
             } else if (role === 'comedian') {
-                document.getElementById('comedianContent').classList.remove('hidden');
-                loadComedianProfile();
+                const co = document.getElementById('comedianContent');
+                if (co) co.classList.remove('hidden');
+                try { loadComedianProfile(); } catch(e) { console.error('[preview comedian] loadComedianProfile:', e); }
             }
 
-            applyLogoEverywhere();
-            applyBannerEverywhere();
+            try { applyLogoEverywhere(); }   catch(e) {}
+            try { applyBannerEverywhere(); } catch(e) {}
         }
 
         function exitPreviewRole() {

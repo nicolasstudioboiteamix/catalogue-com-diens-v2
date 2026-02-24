@@ -1,10 +1,11 @@
 const SESSION_KEY = 'catalogue_session_token';
-let _sessionToken = localStorage.getItem(SESSION_KEY) || null;
+// sessionStorage : isolé par onglet/fenêtre → pas d'auto-login dans un nouvel onglet
+let _sessionToken = sessionStorage.getItem(SESSION_KEY) || null;
 
 function _setSession(token) {
     _sessionToken = token;
-    if (token) localStorage.setItem(SESSION_KEY, token);
-    else        localStorage.removeItem(SESSION_KEY);
+    if (token) sessionStorage.setItem(SESSION_KEY, token);
+    else        sessionStorage.removeItem(SESSION_KEY);
 }
 
 async function apiCall(action, payload = {}) {

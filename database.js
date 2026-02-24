@@ -493,3 +493,8 @@ async function deleteComedianFromDB(comedianId) {
         if (comedian) alert(comedian.name + ' supprime.');
     }
 }
+
+// Exposition globale des fonctions
+window.deleteDatabaseByType = deleteDatabaseByType;
+window.exportDatabase = exportDatabase;
+window.showDatabaseType = showDatabaseType;

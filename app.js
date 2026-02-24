@@ -2084,8 +2084,11 @@ function renderSharedView(comedians, token) {
         }
 
         function displayComedians(comedians) {
+            console.log('[DEBUG displayComedians] count:', comedians.length);
             const grid = document.getElementById('comediansGrid');
             const emptyState = document.getElementById('emptyState');
+            if (!grid) { console.error('[DEBUG] comediansGrid NOT FOUND'); return; }
+            if (!emptyState) { console.error('[DEBUG] emptyState NOT FOUND'); return; }
             
             grid.querySelectorAll('audio').forEach(function(a) {
                 a.pause();
@@ -3261,7 +3264,10 @@ function renderSharedView(comedians, token) {
                 _appFilterDebounceTimer = setTimeout(function() { applyFiltersStudio(false); }, 150);
                 return;
             }
-            const searchName = document.getElementById('searchName').value.toLowerCase();
+            console.log('[DEBUG applyFiltersStudio] AppState.comedians:', AppState.comedians.length, '| currentUser:', currentUser && currentUser.role);
+            const _snEl = document.getElementById('searchName');
+            if (!_snEl) { console.error('[DEBUG] searchName element NOT FOUND in DOM'); return; }
+            const searchName = _snEl.value.toLowerCase();
             const filterFemme = document.getElementById('filterFemme').checked;
             const filterHomme = document.getElementById('filterHomme').checked;
             const filterSeances = document.getElementById('filterSeances').checked;

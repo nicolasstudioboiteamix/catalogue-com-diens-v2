@@ -560,6 +560,8 @@
                 </div>
             </div>
 
+            </div><!-- /adminContent -->
+
             <!-- Studio Team View -->
             <div id="studioContent" class="hidden">
                 <h2 class="section-title">Catalogue des comédiens</h2>
@@ -1970,15 +1972,21 @@
         try {
             setP(20, 'Connexion…');
 
-            await SupabaseDB.initSettings();
-            window.applyLogoEverywhere();
+            try {
+                await SupabaseDB.initSettings();
+                window.applyLogoEverywhere();
+            } catch(e) {
+                // initSettings a échoué (Edge Function pas déployée, réseau, etc.)
+                // On continue quand même — on affiche juste la page de login
+                console.warn('initSettings failed:', e.message);
+            }
 
             setP(100, 'Prêt !');
             await new Promise(r => setTimeout(r, 150));
 
-            screen.style.opacity = '0';
-            screen.style.transition = 'opacity 0.25s';
-            setTimeout(() => { screen.style.display = 'none'; }, 280);
+            // Toujours masquer le loading et afficher le login
+            screen.style.display = 'none';
+            document.getElementById('loginPage').classList.remove('hidden');
 
             (async function loadFullData() {
                 try {

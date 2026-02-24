@@ -1,0 +1,454 @@
+/* variables.css — thème clair uniquement
+   Les variables sombres (défaut) sont dans styles.css :root
+   ─────────────────────────────────────────────────────── */
+
+/* ── THÈME CLAIR ─────────────────────────────────────────── */
+[data-theme="light"] {
+    --bg:          #f0f0f5;
+    --surface:     #ffffff;
+    --surface-2:   #f5f5fa;
+    --surface-3:   #eaeaf2;
+    --card-bg:     #ffffff;
+    --border:      #d5d5e5;
+    --border-hover:#b0b0cc;
+    --accent:      #d63351;
+    --accent-dim:  rgba(214,51,81,0.10);
+    --accent-glow: rgba(214,51,81,0.20);
+    --teal:        #1e9e78;
+    --teal-dim:    rgba(30,158,120,0.10);
+    --text:        #111128;
+    --text-muted:  #5a5a8a;
+    --text-dim:    #9090b8;
+    --success:     #1e9e78;
+    --warning:     #c47c00;
+    --error:       #d63351;
+    --info:        #2d5ec9;
+    --shadow-sm:   0 2px 8px rgba(0,0,0,0.07);
+    --shadow-md:   0 8px 28px rgba(0,0,0,0.10);
+    --shadow-lg:   0 20px 60px rgba(0,0,0,0.14);
+}
+
+/* Transitions douces lors du changement de thème */
+html {
+    transition: background-color 0.25s ease, color 0.25s ease;
+}
+body, .header, .card, .modal-content, .settings-panel,
+.filters, .table-container, .login-box, .list-item,
+.form-group input, .form-group select, .form-group textarea {
+    transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+/* Header clair */
+[data-theme="light"] .header {
+    background: rgba(250,250,255,0.94);
+    border-bottom-color: var(--border);
+}
+
+/* Login clair */
+[data-theme="light"] .login-page {
+    background:
+        radial-gradient(ellipse 60% 55% at 15% 25%, rgba(214,51,81,0.05) 0%, transparent 65%),
+        radial-gradient(ellipse 55% 55% at 85% 75%, rgba(30,158,120,0.04) 0%, transparent 65%),
+        var(--bg);
+}
+
+/* Datepicker icône en mode clair */
+[data-theme="light"] .form-group input[type="date"],
+[data-theme="light"] .form-group input[type="time"] {
+    color-scheme: light;
+}
+[data-theme="light"] .form-group input[type="date"]::-webkit-calendar-picker-indicator,
+[data-theme="light"] .form-group input[type="time"]::-webkit-calendar-picker-indicator {
+    filter: none;
+}
+
+/* Select arrow en mode clair */
+[data-theme="light"] .form-group select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235a5a8a' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+[data-theme="light"] .form-group select option {
+    background: #ffffff;
+    color: #111128;
+}
+
+/* Modal overlay clair */
+[data-theme="light"] .modal {
+    background: rgba(0,0,0,0.35);
+}
+
+/* Scrollbar clair */
+[data-theme="light"] ::-webkit-scrollbar-track { background: var(--surface-2); }
+[data-theme="light"] ::-webkit-scrollbar-thumb { background: var(--border-hover); }
+
+/* Toast clair */
+[data-theme="light"] .toast {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+}
+
+/* Bannière update */
+[data-theme="light"] #updateBanner {
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.12);
+}
+
+/* Logo sur fond clair : fond sombre pour logos blancs */
+[data-theme="light"] .header-logo-img,
+[data-theme="light"] .login-studio-logo {
+    background: #1a1a2e;
+    border-radius: 6px;
+    padding: 4px 8px;
+}
+[data-theme="light"] [data-logo-bg="light"] .header-logo-img,
+[data-theme="light"] [data-logo-bg="light"] .login-studio-logo,
+[data-theme="light"] [data-logo-bg="none"] .header-logo-img,
+[data-theme="light"] [data-logo-bg="none"] .login-studio-logo {
+    background: transparent;
+    padding: 0;
+}
+
+/* ── Variables manquantes redéfinies en mode clair ──────── */
+[data-theme="light"] {
+    --accent-light: #c8284a;
+}
+
+/* ── Éléments générés dynamiquement par JS ─────────────── */
+
+/* Boutons de danger dans les cards générées */
+[data-theme="light"] .btn-icon,
+[data-theme="light"] .btn-ghost,
+[data-theme="light"] .btn-secondary {
+    background: var(--surface-3);
+    color: var(--text);
+    border-color: var(--border);
+}
+[data-theme="light"] .btn-secondary:hover {
+    background: var(--surface-2);
+}
+
+/* Inputs, selects en mode clair */
+[data-theme="light"] .form-group input,
+[data-theme="light"] .form-group select,
+[data-theme="light"] .form-group textarea {
+    background: var(--surface);
+    color: var(--text);
+    border-color: var(--border);
+}
+[data-theme="light"] .form-group input::placeholder,
+[data-theme="light"] .form-group textarea::placeholder {
+    color: var(--text-dim);
+}
+[data-theme="light"] .form-group input:focus,
+[data-theme="light"] .form-group select:focus,
+[data-theme="light"] .form-group textarea:focus {
+    background: var(--surface-2);
+}
+
+/* Table */
+[data-theme="light"] th {
+    background: var(--surface-2);
+    color: var(--text-muted);
+}
+[data-theme="light"] td {
+    color: var(--text);
+    border-bottom-color: var(--border);
+}
+[data-theme="light"] tr:hover td {
+    background: var(--surface-2);
+}
+[data-theme="light"] .table-container {
+    background: var(--surface);
+    border-color: var(--border);
+}
+
+/* Filtres */
+[data-theme="light"] .filters {
+    background: var(--surface);
+    border-color: var(--border);
+}
+[data-theme="light"] .checkbox-label {
+    background: var(--surface-2);
+    border-color: var(--border);
+    color: var(--text-muted);
+}
+[data-theme="light"] .checkbox-label:hover {
+    border-color: var(--accent);
+    color: var(--text);
+    background: var(--accent-dim);
+}
+
+/* Nav tabs */
+[data-theme="light"] .nav-tab:hover {
+    background: var(--surface-2);
+    color: var(--text);
+}
+
+/* Cards générées dynamiquement */
+[data-theme="light"] .card {
+    background: var(--surface);
+    border-color: var(--border);
+}
+[data-theme="light"] .card:hover {
+    border-color: var(--border-hover);
+}
+[data-theme="light"] .card-info h3,
+[data-theme="light"] .list-item-info h4 {
+    color: var(--text);
+}
+[data-theme="light"] .card-meta,
+[data-theme="light"] .list-item-info p {
+    color: var(--text-muted);
+}
+
+/* Tags / Badges */
+[data-theme="light"] .tag {
+    background: rgba(30,158,120,0.10);
+    color: var(--teal);
+    border-color: rgba(30,158,120,0.2);
+}
+[data-theme="light"] .badge-success {
+    background: rgba(30,158,120,0.10);
+    color: var(--teal);
+}
+[data-theme="light"] .badge-danger {
+    background: var(--accent-dim);
+    color: var(--accent);
+}
+[data-theme="light"] .badge-warning {
+    background: rgba(196,124,0,0.10);
+    color: var(--warning);
+}
+[data-theme="light"] .badge-info {
+    background: rgba(45,94,201,0.10);
+    color: var(--info);
+}
+
+/* List items */
+[data-theme="light"] .list-item {
+    background: var(--surface);
+    border-color: var(--border);
+}
+[data-theme="light"] .list-item:hover {
+    background: var(--accent-dim);
+    border-color: rgba(214,51,81,0.3);
+}
+
+/* Sections paramètres */
+[data-theme="light"] .settings-section {
+    border-bottom-color: var(--border);
+}
+[data-theme="light"] .settings-section h3 {
+    color: var(--text);
+}
+[data-theme="light"] .settings-section p {
+    color: var(--text-muted);
+}
+[data-theme="light"] .logo-preview-box {
+    background: var(--surface-2);
+    border-color: var(--border);
+}
+[data-theme="light"] .logo-preview-placeholder {
+    background: var(--surface-3);
+    border-color: var(--border);
+    color: var(--text-dim);
+}
+
+/* Stat cards */
+[data-theme="light"] .stat-card {
+    background: var(--surface);
+    border-color: var(--border);
+}
+[data-theme="light"] .stat-card .stat-label {
+    color: var(--text-muted);
+}
+
+/* Role section */
+[data-theme="light"] .role-section {
+    background: var(--surface-2);
+    border-color: var(--border);
+}
+[data-theme="light"] .role-section h3 {
+    color: var(--text);
+}
+
+/* Section titles */
+[data-theme="light"] .section-title {
+    color: var(--text);
+    border-bottom-color: var(--border);
+}
+
+/* Empty state */
+[data-theme="light"] .empty-state {
+    background: var(--surface);
+    border-color: var(--border);
+    color: var(--text-muted);
+}
+[data-theme="light"] .empty-state h3 {
+    color: var(--text);
+}
+
+/* Audio block */
+[data-theme="light"] .audio-block {
+    background: rgba(30,158,120,0.06);
+    border-color: rgba(30,158,120,0.15);
+}
+
+/* Absences */
+[data-theme="light"] .absence-item,
+[data-theme="light"] .card-absence-item {
+    background: rgba(196,124,0,0.05);
+    border-color: rgba(196,124,0,0.15);
+}
+[data-theme="light"] .card-absences h4 {
+    color: var(--warning);
+}
+
+/* Modal content */
+[data-theme="light"] .modal-content {
+    background: var(--surface);
+    border-color: var(--border);
+}
+[data-theme="light"] .modal-header {
+    border-bottom-color: var(--border);
+}
+[data-theme="light"] .modal-header h2 {
+    color: var(--text);
+}
+[data-theme="light"] .close-btn {
+    background: var(--surface-3);
+    border-color: var(--border);
+    color: var(--text-muted);
+}
+
+/* Profil comédien — bouton ajouter absence */
+[data-theme="light"] button[onclick="openQuickAbsence()"],
+[data-theme="light"] .btn-absence-add {
+    background: var(--warning) !important;
+    color: #fff !important;
+}
+
+/* Éléments inline sombres générés par JS */
+[data-theme="light"] .selection-btn-label {
+    background: var(--surface-2);
+    border-color: var(--border);
+    color: var(--text-muted);
+}
+
+/* Header badge rôle */
+[data-theme="light"] .user-badge {
+    background: var(--accent-dim);
+    border-color: rgba(214,51,81,0.25);
+    color: var(--accent);
+}
+[data-theme="light"] #userName {
+    color: var(--text-muted);
+}
+
+/* Scrollbar dans modals */
+[data-theme="light"] .modal-content::-webkit-scrollbar-track {
+    background: var(--surface-2);
+}
+[data-theme="light"] .modal-content::-webkit-scrollbar-thumb {
+    background: var(--border-hover);
+}
+
+/* ── Bouton "Ajouter une absence" comédien ─────────────── */
+.btn-absence-add {
+    background: var(--warning);
+    color: #fff;
+}
+.btn-absence-add:hover {
+    background: #e8920a;
+    box-shadow: 0 8px 24px rgba(196,124,0,0.3);
+}
+[data-theme="light"] .btn-absence-add {
+    background: var(--warning);
+    color: #fff;
+}
+[data-theme="light"] .btn-absence-add:hover {
+    background: #b56e00;
+}
+
+/* ── Filtres utilisateurs admin — pills de rôle ─────────── */
+.user-role-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text-muted);
+    font-size: 0.82em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    font-family: var(--font-body);
+    white-space: nowrap;
+}
+.user-role-pill:hover {
+    border-color: var(--accent);
+    color: var(--text);
+    background: var(--accent-dim);
+}
+.user-role-pill.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(214,51,81,0.35);
+}
+/* Couleurs spécifiques par rôle actif */
+.user-role-pill[data-role="studio"].active   { background:var(--teal); border-color:var(--teal); box-shadow:0 4px 12px rgba(30,158,120,0.35); }
+.user-role-pill[data-role="manager"].active  { background:#8e44ad; border-color:#8e44ad; box-shadow:0 4px 12px rgba(142,68,173,0.35); }
+.user-role-pill[data-role="comedian"].active { background:#e67e22; border-color:#e67e22; box-shadow:0 4px 12px rgba(230,126,34,0.35); }
+.user-role-pill[data-role="client"].active   { background:#2980b9; border-color:#2980b9; box-shadow:0 4px 12px rgba(41,128,185,0.35); }
+.user-role-pill[data-role="admin"].active    { background:var(--accent); border-color:var(--accent); }
+
+/* Highlight de la ligne au survol dans la table users */
+#usersListByRole tbody tr { transition: background 0.15s; }
+#usersListByRole tbody tr:hover td { background: var(--accent-dim); }
+
+/* Animation d'entrée des résultats */
+@keyframes userRowFadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.role-section { animation: userRowFadeIn 0.2s ease both; }
+
+/* Highlight du terme recherché */
+.user-search-highlight {
+    background: rgba(214,51,81,0.18);
+    color: var(--accent);
+    border-radius: 3px;
+    padding: 0 2px;
+    font-weight: 700;
+}
+
+/* Mode clair */
+[data-theme="light"] .user-role-pill {
+    background: var(--surface-2);
+    color: var(--text-muted);
+    border-color: var(--border);
+}
+[data-theme="light"] .user-role-pill:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-dim);
+}
+[data-theme="light"] .user-role-pill.active {
+    color: #fff;
+}
+
+/* ── Champ recherche utilisateurs — focus ring ──────────── */
+#adminUsersSection .search-bar-wrap:focus-within {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px var(--accent-dim);
+}
+[data-theme="light"] #usersListByRole .role-section {
+    background: var(--surface);
+}
+[data-theme="light"] .user-search-highlight {
+    background: rgba(214,51,81,0.12);
+    color: var(--accent);
+}

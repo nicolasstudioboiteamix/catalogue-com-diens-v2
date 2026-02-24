@@ -1,0 +1,4 @@
+Nom,Prénom,Sexe,Email,Téléphone,Classement,Séances dirigées,Voix off,Voix jouée,Voix enfant,Chant,Voix jeune,Voix adulte,Voix mature,Voix avec accent,Timbre grave,Timbre médium,Timbre aigu,Voix texturée,Style dynamique,Style posé,Style naturel,Style institutionnel,Actif
+DUPONT,Marie,Femme,marie.test@example.com,0612345678,interne,oui,oui,oui,non,non,non,oui,non,non,non,oui,non,non,oui,non,oui,oui,oui
+MARTIN,Sophie,Femme,sophie.test@example.com,0623456789,externe,non,oui,oui,oui,oui,oui,non,non,non,non,non,oui,non,oui,non,oui,non,oui
+BERNARD,Jean,Homme,jean.test@example.com,0634567890,interne,oui,oui,non,non,non,non,oui,non,non,oui,non,non,oui,non,oui,non,oui,oui

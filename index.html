@@ -1,0 +1,2056 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Anti-flash thème : appliqué avant le CSS -->
+    <script>
+    (function(){
+        var s = localStorage.getItem('catalogue_theme') || 'auto';
+        var h = new Date().getHours();
+        var effective = s === 'auto' ? (h >= 7 && h < 21 ? 'light' : 'dark') : s;
+        document.documentElement.setAttribute('data-theme', effective);
+    })();
+    </script>
+    <!-- Empêche le cache navigateur sur index.html -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <!-- Version de build pour détection de mise à jour -->
+    <meta name="app-version" content="BUILD_VERSION">
+    <script>
+    (function() {
+        var V = 'BUILD_VERSION';
+        // Fallback si le workflow n'a pas encore remplacé le placeholder
+        // On teste si V ressemble à un vrai timestamp (14 chiffres)
+        if (!/^\d{14}$/.test(V)) { V = String(Date.now()); }
+        window.__APP_V__ = V;
+        var stored = localStorage.getItem('__catalogue_v__');
+        if (stored && stored !== V) {
+            // Nouvelle version détectée → forcer rechargement depuis serveur
+            localStorage.setItem('__catalogue_v__', V);
+            window.location.reload(true);
+            return;
+        }
+        localStorage.setItem('__catalogue_v__', V);
+    })();
+    </script>
+    <title>Catalogue Comédiens</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+    <!-- CSS injecté dynamiquement par le loader de scripts ci-dessous -->
+</head>
+<body>
+
+    <!-- Login Page -->
+    <div id="loginPage" class="login-page">
+        <div class="login-box">
+            <div class="login-logo-container" id="loginLogoContainer">
+                <span class="login-default-icon" id="loginDefaultIcon">🎭</span>
+            </div>
+            <div class="subtitle" id="loginSubtitle">Catalogue Comédiens</div>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Identifiant</label>
+                    <input type="text" id="loginUsername" required>
+                </div>
+                <div class="form-group">
+                    <label>Mot de passe</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                <button type="submit" class="btn">Se connecter</button>
+            </form>
+            <div id="loginError" style="color: var(--accent); margin-top: 15px; text-align: center; display: none;"></div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="hidden">
+        <div class="header">
+            <div class="header-content">
+                <div class="header-brand">
+                    <div id="headerLogoContainer"><span style="font-size:1.4em;">🎭</span></div>
+                    <h1 id="headerTitle">Catalogue Comédiens</h1>
+                </div>
+                <div class="user-info">
+                    <span class="user-badge" id="userRole"></span>
+                    <span id="userName"></span>
+                    <!-- Toggle thème -->
+                    <button id="themeToggleBtn" onclick="cycleTheme()" title="Changer de thème"
+                        style="background:transparent; border:1px solid var(--border);
+                               border-radius:20px; padding:5px 12px; cursor:pointer;
+                               color:var(--text-muted); font-size:0.82em; font-family:var(--font-body);
+                               display:flex; align-items:center; gap:5px;
+                               transition:all 0.2s ease;">
+                        <span id="themeIcon">🌙</span>
+                        <span id="themeLabel">Auto</span>
+                    </button>
+                    <button class="btn btn-small" onclick="logout()">Déconnexion</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="adminPreviewBar" style="display:none; position:sticky; top:0; z-index:200; background:#e67e22; color:#fff; padding:8px 16px; align-items:center; gap:12px; font-size:0.9em; font-weight:600; box-shadow:0 2px 10px rgba(0,0,0,0.4);">
+            <span>👁️ Aperçu comme :</span>
+            <span id="adminPreviewLabel" style="background:rgba(255,255,255,0.2); padding:3px 10px; border-radius:12px;"></span>
+            <button onclick="window.exitPreviewRole()" style="margin-left:auto; background:rgba(0,0,0,0.3); border:none; color:#fff; padding:5px 14px; border-radius:12px; cursor:pointer; font-weight:700;">✖ Retour admin</button>
+        </div>
+
+        <div class="container">
+            <!-- Admin Navigation -->
+            <div id="adminNav" class="nav-tabs hidden">
+                <div class="nav-tab active" onclick="showAdminSection('users')">Utilisateurs</div>
+                <div class="nav-tab" onclick="showAdminSection('comedians')">Comédiens</div>
+                <div class="nav-tab" onclick="showAdminSection('database')">Base de données</div>
+                <div class="nav-tab" onclick="showAdminSection('absences')">Absences</div>
+                <div class="nav-tab" onclick="showAdminSection('logs')">Historique</div>
+                <div class="nav-tab" onclick="showAdminSection('settings')">⚙️ Paramètres</div>
+                <div style="margin-left:auto; display:flex; align-items:center; gap:6px; padding:0 8px;">
+                    <span style="font-size:0.75em; color:var(--text-muted); white-space:nowrap;">Aperçu :</span>
+                    <button onclick="window.setPreviewRole('studio')" class="btn btn-small btn-secondary" style="font-size:0.75em; padding:3px 8px;">🎙️ Studio</button>
+                    <button onclick="window.setPreviewRole('manager')" class="btn btn-small btn-secondary" style="font-size:0.75em; padding:3px 8px;">📋 Manager</button>
+                    <button onclick="window.setPreviewRole('comedian')" class="btn btn-small btn-secondary" style="font-size:0.75em; padding:3px 8px;">🎭 Comédien</button>
+                    <button onclick="window.setPreviewRole('client')" class="btn btn-small btn-secondary" style="font-size:0.75em; padding:3px 8px;">👤 Client</button>
+                </div>
+            </div>
+
+            <!-- Admin Sections -->
+            <div id="adminContent" class="hidden">
+                <!-- Users Management -->
+                <div id="adminUsersSection" class="section">
+                    <h2 class="section-title">Gestion des utilisateurs</h2>
+
+                    <!-- ── Barre d'outils ───────────────────────────────── -->
+                    <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; align-items:center;">
+                        <button class="btn btn-small" onclick="openModal('createUserModal')">＋ Créer un utilisateur</button>
+                        <button class="btn btn-small" style="background:var(--success);" onclick="exportUsersCSV()">⬇️ Exporter CSV</button>
+                        <button class="btn btn-small" style="background:var(--success);" onclick="document.getElementById('importUsersFile').click()">⬆️ Importer CSV</button>
+                        <input type="file" id="importUsersFile" accept=".csv" style="display:none" onchange="importUsersCSV(this)">
+
+                        <!-- Suppression rapide — regroupées sous un menu discret -->
+                        <div style="position:relative; margin-left:auto;" id="userDeleteMenu">
+                            <button class="btn btn-small" style="background:rgba(192,57,43,0.15);color:var(--accent);border:1px solid rgba(192,57,43,0.3);"
+                                onclick="document.getElementById('userDeleteDropdown').style.display = document.getElementById('userDeleteDropdown').style.display==='block'?'none':'block'">
+                                🗑️ Supprimer par rôle ▾
+                            </button>
+                            <div id="userDeleteDropdown" style="display:none;position:absolute;right:0;top:calc(100% + 6px);background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:6px;z-index:50;min-width:220px;box-shadow:0 8px 24px rgba(0,0,0,0.3);">
+                                <button class="btn btn-small" style="width:100%;background:#c0392b;margin-bottom:4px;" onclick="deleteUsersByRole('comedian');document.getElementById('userDeleteDropdown').style.display='none'">🗑️ Tous les comédiens</button>
+                                <button class="btn btn-small" style="width:100%;background:#c0392b;margin-bottom:4px;" onclick="deleteUsersByRole('client');document.getElementById('userDeleteDropdown').style.display='none'">🗑️ Tous les clients</button>
+                                <button class="btn btn-small" style="width:100%;background:#c0392b;margin-bottom:4px;" onclick="deleteUsersByRole('studio');document.getElementById('userDeleteDropdown').style.display='none'">🗑️ Tous studio</button>
+                                <button class="btn btn-small" style="width:100%;background:#c0392b;" onclick="deleteUsersByRole('manager');document.getElementById('userDeleteDropdown').style.display='none'">🗑️ Tous managers</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Barre de recherche & filtres rôles ───────────── -->
+                    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:16px 20px;margin-bottom:20px;">
+
+                        <!-- Ligne 1 : compteur + champ recherche -->
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
+                            <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:220px;background:var(--surface-2);border:1px solid var(--border);border-radius:30px;padding:8px 16px;transition:border-color .2s;"
+                                 onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+                                <span style="color:var(--text-dim);font-size:0.95em;">🔍</span>
+                                <input type="text" id="userSearchInput"
+                                    placeholder="Rechercher par nom d'utilisateur ou email…"
+                                    oninput="filterUsers(true)"
+                                    style="border:none;background:transparent;outline:none;width:100%;color:var(--text);font-size:0.9em;font-family:var(--font-body);">
+                                <button id="userSearchClear" onclick="clearUserSearch()" title="Effacer"
+                                    style="display:none;background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:1em;padding:0;line-height:1;">✕</button>
+                            </div>
+
+                            <!-- Compteur résultats -->
+                            <div id="userSearchCount"
+                                style="font-size:0.82em;color:var(--text-dim);white-space:nowrap;min-width:80px;text-align:right;">
+                            </div>
+                        </div>
+
+                        <!-- Ligne 2 : filtres rôles (pills) -->
+                        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+                            <span style="font-size:0.78em;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);margin-right:4px;">Rôle :</span>
+
+                            <button class="user-role-pill active" data-role="all" onclick="selectUserRolePill(this,'all')">
+                                Tous
+                            </button>
+                            <button class="user-role-pill" data-role="admin" onclick="selectUserRolePill(this,'admin')">
+                                🛡️ Admin
+                            </button>
+                            <button class="user-role-pill" data-role="studio" onclick="selectUserRolePill(this,'studio')">
+                                🎙️ Studio
+                            </button>
+                            <button class="user-role-pill" data-role="manager" onclick="selectUserRolePill(this,'manager')">
+                                📋 Manager
+                            </button>
+                            <button class="user-role-pill" data-role="comedian" onclick="selectUserRolePill(this,'comedian')">
+                                🎭 Comédien
+                            </button>
+                            <button class="user-role-pill" data-role="client" onclick="selectUserRolePill(this,'client')">
+                                👤 Client
+                            </button>
+
+                            <!-- Bouton reset -->
+                            <button id="userFilterReset" onclick="resetUserFilters()"
+                                style="display:none;margin-left:auto;background:none;border:none;cursor:pointer;font-size:0.8em;color:var(--text-dim);text-decoration:underline;">
+                                Réinitialiser les filtres
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ── État vide de recherche ────────────────────────── -->
+                    <div id="userSearchEmpty" style="display:none;text-align:center;padding:40px 20px;color:var(--text-muted);">
+                        <div style="font-size:2.5em;margin-bottom:12px;opacity:0.4;">🔍</div>
+                        <p style="font-weight:600;margin-bottom:6px;">Aucun utilisateur trouvé</p>
+                        <p style="font-size:0.85em;">Essayez un autre terme ou <button onclick="resetUserFilters()" style="background:none;border:none;cursor:pointer;color:var(--accent);text-decoration:underline;font-size:inherit;">réinitialisez les filtres</button></p>
+                    </div>
+
+                    <div id="usersListByRole" style="margin-top:4px;"></div>
+                </div>
+
+                <!-- Comedians Management -->
+                <div id="adminComediansSection" class="section hidden">
+                    <h2 class="section-title">Gestion des comédiens</h2>
+                    <button class="btn btn-small" onclick="openModal('createComedianModal')">+ Créer une fiche comédien</button>
+                    
+                    <!-- Search filter for admin -->
+                    <div class="filters" style="margin-top: 20px;">
+                        <div class="form-group">
+                            <label>Recherche par nom</label>
+                            <input type="text" id="adminSearchName" placeholder="Rechercher un comédien..." oninput="filterAdminComedians(true)">
+                        </div>
+                        <div class="checkbox-group" style="margin-top: 12px; display: flex; gap: 20px; align-items: center;">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="adminFilterInterne" onchange="filterAdminComedians()">
+                                <span style="color: var(--accent);">🏠 Interne</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="adminFilterExterne" onchange="filterAdminComedians()">
+                                <span style="color: var(--teal);">🌐 Externe</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="adminFilterInactif" onchange="filterAdminComedians()">
+                                <span style="color: var(--text-muted);">⚫ Inactifs</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="comediansListView"></div>
+                </div>
+
+                <!-- Logs -->
+                <div id="adminLogsSection" class="section hidden">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 class="section-title" style="margin: 0;">Historique des connexions</h2>
+                        <button class="btn btn-small" style="background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);" onclick="clearLogs()">🗑️ Supprimer l'historique</button>
+                    </div>
+                    <div class="table-container">
+                        <table id="logsTable">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Utilisateur</th>
+                                    <th>Rôle</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Database Management -->
+                <div id="adminDatabaseSection" class="section hidden">
+                    <h2 class="section-title">Base de données des comédiens</h2>
+                    
+                    <!-- Onglets Bases Distinctes -->
+                    <div style="display: flex; gap: 10px; margin: 20px 0; border-bottom: 2px solid var(--border); padding-bottom: 10px;">
+                        <button class="nav-tab active" onclick="showDatabaseType('tous')" id="dbTabTous">
+                            Tous (<span id="countTous">0</span>)
+                        </button>
+                        <button class="nav-tab" onclick="showDatabaseType('interne')" id="dbTabInterne" style="color: var(--accent);">
+                            🏠 Base Interne (<span id="countInterne">0</span>)
+                        </button>
+                        <button class="nav-tab" onclick="showDatabaseType('externe')" id="dbTabExterne" style="color: var(--success);">
+                            🌍 Base Externe (<span id="countExterne">0</span>)
+                        </button>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                        <button class="btn btn-small" onclick="exportDatabase('csv')">📥 Exporter CSV</button>
+                        <button class="btn btn-small" onclick="exportDatabase('json')">📥 Exporter JSON</button>
+                        <button class="btn btn-small btn-secondary" onclick="document.getElementById('importCsvInput').click()">📤 Importer CSV</button>
+                        <input type="file" id="importCsvInput" accept=".csv" style="display: none;" onchange="importCSV(event)">
+                        <button class="btn btn-small btn-secondary" onclick="document.getElementById('importJsonInput').click()">📤 Importer JSON</button>
+                        <input type="file" id="importJsonInput" accept=".json" style="display: none;" onchange="importJSON(event)">
+                        <button class="btn btn-small" style="background: #c0392b; margin-left: auto;" onclick="deleteDatabaseByType()">🗑️ Supprimer base affichée</button>
+                    </div>
+                    
+                    <div style="background: rgba(78, 204, 163, 0.1); padding: 15px; border-radius: 8px; border-left: 4px solid var(--success); margin-bottom: 20px;">
+                        <h3 style="color: var(--success); margin-bottom: 10px;">📊 Statistiques</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                            <div>
+                                <strong style="color: var(--accent-light);" id="totalComedians">0</strong>
+                                <p style="color: var(--text-muted); font-size: 0.9em;">Total comédiens</p>
+                            </div>
+                            <div>
+                                <strong style="color: var(--success);" id="activeComedians">0</strong>
+                                <p style="color: var(--text-muted); font-size: 0.9em;">Actifs</p>
+                            </div>
+                            <div>
+                                <strong style="color: var(--warning);" id="inactiveComedians">0</strong>
+                                <p style="color: var(--text-muted); font-size: 0.9em;">Inactifs</p>
+                            </div>
+                            <div>
+                                <strong style="color: var(--accent-light);" id="interneComedians">0</strong>
+                                <p style="color: var(--text-muted); font-size: 0.9em;">Classement Interne</p>
+                            </div>
+                            <div>
+                                <strong style="color: var(--accent-light);" id="externeComedians">0</strong>
+                                <p style="color: var(--text-muted); font-size: 0.9em;">Classement Externe</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="filters" style="margin-bottom: 20px;">
+                        <div class="form-group">
+                            <label>Recherche dans la base</label>
+                            <input type="text" id="databaseSearch" placeholder="Rechercher par nom, email..." oninput="filterDatabase(true)">
+                        </div>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="dbFilterActifs" onchange="filterDatabase()"> Actifs uniquement
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="dbFilterInterne" onchange="filterDatabase()"> Classement Interne
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="dbFilterExterne" onchange="filterDatabase()"> Classement Externe
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div style="overflow-x: auto;">
+                        <table id="databaseTable" style="width: 100%; font-size: 0.9em;">
+                            <thead>
+                                <tr>
+                                    <th>Nom</th>
+                                    <th>Sexe</th>
+                                    <th>Email</th>
+                                    <th>Téléphone</th>
+                                    <th>Classement</th>
+                                    <th>Compétences</th>
+                                    <th>Statut</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="databaseTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Absences Management -->
+                <div id="adminAbsencesSection" class="section hidden">
+                    <h2 class="section-title">Gestion des absences</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 20px;">Vue d'ensemble de toutes les absences des comédiens</p>
+
+                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+                        <button class="btn" onclick="openAdminAddAbsenceModal()" style="background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);">
+                            ➕ Ajouter une absence
+                        </button>
+                        <label class="checkbox-label" style="background: rgba(78, 204, 163, 0.1); border: 1px solid var(--success); display: inline-flex; margin: 0;">
+                            <input type="checkbox" id="adminShowPastAbsences" onchange="loadAdminAbsences()">
+                            <span style="color: var(--success);">Afficher aussi les absences passées</span>
+                        </label>
+                    </div>
+
+                    <div id="adminAbsencesList"></div>
+                </div>
+                <!-- Settings / Logo Admin -->
+                <div id="adminSettingsSection" class="section hidden">
+                    <h2 class="section-title">Paramètres du studio</h2>
+
+                    <!-- Sous-onglets Paramètres -->
+                    <div style="display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:var(--s5);">
+                        <button class="settings-tab active" onclick="showSettingsTab('general')" id="stab-general"
+                            style="padding:8px 20px;background:var(--accent-dim);border:none;border-bottom:2px solid var(--accent);
+                                   color:var(--accent);font-family:var(--font-body);font-weight:600;font-size:.88em;cursor:pointer;border-radius:var(--r1) var(--r1) 0 0;">
+                            ⚙️ Général
+                        </button>
+                        <button class="settings-tab" onclick="showSettingsTab('emails')" id="stab-emails"
+                            style="padding:8px 20px;background:transparent;border:none;border-bottom:2px solid transparent;
+                                   color:var(--text-muted);font-family:var(--font-body);font-weight:500;font-size:.88em;cursor:pointer;border-radius:var(--r1) var(--r1) 0 0;">
+                            📧 Gestion des emails
+                        </button>
+                    </div>
+
+                    <!-- Onglet Général -->
+                    <div id="settings-tab-general">
+                        <div class="settings-panel">
+                            <div class="settings-section">
+                                <h3>🖼️ Logo du studio</h3>
+                                <p>Ce logo apparaîtra sur la page de connexion et dans l'en-tête de toutes les interfaces.</p>
+                                <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                                    <label class="btn btn-secondary btn-small" style="cursor:pointer;">
+                                        📁 Choisir un logo
+                                        <input type="file" id="logoUploadInput" accept="image/*" style="display:none" onchange="handleLogoUpload(event)">
+                                    </label>
+                                    <button class="btn btn-danger btn-small" onclick="removeLogo()">🗑️ Supprimer le logo</button>
+                                </div>
+                                <div class="logo-preview-box" id="logoPreviewBox">
+                                    <div class="logo-preview-placeholder" id="logoPreviewPlaceholder">Aucun logo</div>
+                                    <div id="logoPreviewContent" style="display:none">
+                                        <img id="logoPreviewImg" src="" alt="Logo studio">
+                                        <div style="color:var(--text-muted);font-size:.82em;">
+                                            <p id="logoPreviewName" style="color:var(--text);font-weight:600;margin-bottom:4px;"></p>
+                                            <p>Le logo s'affiche sur toutes les pages.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="settings-section">
+                                <h3>🌓 Logo en mode clair</h3>
+                                <p>Si votre logo est blanc ou clair, choisissez comment il s'affiche quand le thème clair est activé.</p>
+                                <div style="display:flex;gap:10px;align-items:flex-end;margin-top:10px;">
+                                    <div class="form-group" style="flex:1;margin-bottom:0;">
+                                        <label>Comportement</label>
+                                        <select id="logoLightModeSelect" onchange="saveLogoLightMode(this.value)">
+                                            <option value="dark-bg">🌙 Fond sombre derrière le logo (logo blanc)</option>
+                                            <option value="light-bg">☀️ Pas de fond (logo déjà foncé)</option>
+                                            <option value="none">🚫 Aucun traitement</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <!-- Prévisualisation -->
+                                <div style="margin-top:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+                                    <div style="background:#f2f2f7;padding:10px 16px;border-radius:8px;border:1px solid #d8d8e8;font-size:0.8em;color:#6060a0;">
+                                        Aperçu mode clair →
+                                        <img id="logoLightPreview" src="" alt="" style="max-height:28px;vertical-align:middle;margin-left:8px;border-radius:4px;display:none;">
+                                        <span id="logoLightPreviewEmpty" style="color:#a0a0c0;font-style:italic;">aucun logo</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="settings-section">
+                                <h3>🏷️ Nom du studio</h3>
+                                <p>Personnalisez le nom affiché dans l'en-tête et sur la page de connexion.</p>
+                                <div style="display:flex;gap:10px;align-items:flex-end;">
+                                    <div class="form-group" style="flex:1;margin-bottom:0">
+                                        <label>Nom affiché</label>
+                                        <input type="text" id="studioNameInput" placeholder="Catalogue Comédiens" oninput="previewStudioName()">
+                                    </div>
+                                    <button class="btn btn-success btn-small" onclick="saveStudioName()">✓ Enregistrer</button>
+                                </div>
+                            </div>
+
+                    </div>
+
+                    <!-- Onglet Emails -->
+                    <div id="settings-tab-emails" style="display:none;">
+                        <!-- Sous-catégories emails -->
+                        <div style="display:flex;gap:var(--s2);margin-bottom:var(--s5);flex-wrap:wrap;" id="emailCatTabs">
+                            <button class="email-cat-tab active" onclick="showEmailCategory('comedien')" id="ecat-comedien"
+                                style="padding:6px 16px;background:var(--teal-dim);border:1px solid rgba(62,207,168,.3);
+                                       color:var(--teal);border-radius:20px;font-family:var(--font-body);font-size:.82em;
+                                       font-weight:700;cursor:pointer;">🎙️ Emails comédiens</button>
+                            <button class="email-cat-tab" onclick="showEmailCategory('client')" id="ecat-client"
+                                style="padding:6px 16px;background:transparent;border:1px solid var(--border);
+                                       color:var(--text-muted);border-radius:20px;font-family:var(--font-body);font-size:.82em;
+                                       font-weight:600;cursor:pointer;">👤 Emails clients</button>
+                            <button class="email-cat-tab" onclick="showEmailCategory('studio')" id="ecat-studio"
+                                style="padding:6px 16px;background:transparent;border:1px solid var(--border);
+                                       color:var(--text-muted);border-radius:20px;font-family:var(--font-body);font-size:.82em;
+                                       font-weight:600;cursor:pointer;">🏢 Emails studio</button>
+                            <button class="email-cat-tab" onclick="showEmailCategory('systeme')" id="ecat-systeme"
+                                style="padding:6px 16px;background:transparent;border:1px solid var(--border);
+                                       color:var(--text-muted);border-radius:20px;font-family:var(--font-body);font-size:.82em;
+                                       font-weight:600;cursor:pointer;">🔧 Système</button>
+                        </div>
+
+                        <!-- Liste + éditeur côte à côte -->
+                        <div style="display:grid;grid-template-columns:280px 1fr;gap:var(--s5);align-items:start;" id="emailEditorLayout">
+
+                            <!-- Liste des templates -->
+                            <div>
+                                <div id="emailTemplateList" style="display:flex;flex-direction:column;gap:var(--s2);"></div>
+                                <button onclick="openNewTemplateModal()" class="btn btn-ghost btn-small" style="width:100%;margin-top:var(--s3);justify-content:center;">
+                                    + Nouveau template
+                                </button>
+                            </div>
+
+                            <!-- Éditeur -->
+                            <div id="emailEditorPanel" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r3);overflow:hidden;">
+                                <div style="padding:var(--s5);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:var(--s4);">
+                                    <div>
+                                        <h3 id="emailEditorTitle" style="font-size:1em;color:var(--text);margin-bottom:2px;">Sélectionnez un template</h3>
+                                        <p id="emailEditorDesc" style="font-size:.8em;color:var(--text-muted);">Cliquez sur un template dans la liste pour l'éditer</p>
+                                    </div>
+                                    <div style="display:flex;gap:var(--s2);">
+                                        <button id="emailEditorSaveBtn" onclick="saveCurrentTemplate()" class="btn btn-success btn-small" style="display:none;">✓ Enregistrer</button>
+                                        <button id="emailEditorResetBtn" onclick="resetCurrentTemplate()" class="btn btn-ghost btn-small" style="display:none;">↺ Réinitialiser</button>
+                                        <button id="emailEditorDeleteBtn" onclick="deleteCurrentTemplate()" class="btn btn-danger btn-small" style="display:none;">🗑️</button>
+                                    </div>
+                                </div>
+
+                                <div id="emailEditorFields" style="padding:var(--s5);display:none;">
+                                    <!-- Champ : Nom du template -->
+                                    <div class="form-group">
+                                        <label>Nom du template</label>
+                                        <input type="text" id="tplName" placeholder="Ex : Commande urgente" oninput="updateEmailPreview()">
+                                    </div>
+
+                                    <!-- Champ : Catégorie -->
+                                    <div class="form-group">
+                                        <label>Catégorie</label>
+                                        <select id="tplCategory" onchange="renderVarsChips(this.value); updateEmailPreview();">
+                                            <option value="comedien">🎙️ Emails comédiens</option>
+                                            <option value="client">👤 Emails clients</option>
+                                            <option value="studio">🏢 Emails studio</option>
+                                            <option value="systeme">🔧 Système</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Champ : Objet -->
+                                    <div class="form-group">
+                                        <label>Objet de l'email</label>
+                                        <input type="text" id="tplSubject" placeholder="Objet du mail" oninput="updateEmailPreview()">
+                                    </div>
+
+                                    <!-- Variables disponibles -->
+                                    <div style="margin-bottom:var(--s4);">
+                                        <p style="font-size:.78em;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-bottom:var(--s2);">Variables disponibles — cliquez pour insérer</p>
+                                        <div id="tplVarsAvailable" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+                                    </div>
+
+                                    <!-- Corps du mail -->
+                                    <div class="form-group">
+                                        <label>Corps de l'email</label>
+                                        <textarea id="tplBody" rows="12" style="font-family:monospace;font-size:.85em;"
+                                            oninput="updateEmailPreview()"></textarea>
+                                    </div>
+
+                                    <!-- Règles / notes -->
+                                    <div class="form-group">
+                                        <label>Règles & notes internes <small style="color:var(--text-muted);font-weight:normal;">(non envoyées)</small></label>
+                                        <textarea id="tplRules" rows="3" placeholder="Ex : Envoyer uniquement en semaine, toujours CC le manager..."></textarea>
+                                    </div>
+
+                                    <!-- Prévisualisation -->
+                                    <div style="border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;">
+                                        <div style="background:var(--surface-2);padding:10px var(--s4);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                                            <span style="font-size:.78em;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);">Prévisualisation</span>
+                                            <button onclick="toggleEmailPreview()" style="background:transparent;border:none;color:var(--text-muted);cursor:pointer;font-size:.8em;" id="previewToggleBtn">▼ Afficher</button>
+                                        </div>
+                                        <div id="emailPreviewContent" style="display:none;padding:var(--s4);">
+                                            <p style="font-size:.78em;color:var(--text-muted);margin-bottom:var(--s3);">
+                                                Objet : <strong id="previewSubject" style="color:var(--text);"></strong>
+                                            </p>
+                                            <pre id="previewBody" style="font-family:var(--font-body);font-size:.85em;white-space:pre-wrap;color:var(--text);line-height:1.6;"></pre>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- État vide -->
+                                <div id="emailEditorEmpty" style="padding:var(--s7);text-align:center;color:var(--text-muted);">
+                                    <div style="font-size:2.5em;margin-bottom:var(--s4);opacity:.3;">📧</div>
+                                    <p>Sélectionnez un template à gauche pour l'éditer<br>ou créez-en un nouveau.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Responsive : empiler sur mobile -->
+                        <style>@media(max-width:768px){#emailEditorLayout{grid-template-columns:1fr;}}</style>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Studio Team View -->
+            <div id="studioContent" class="hidden">
+                <h2 class="section-title">Catalogue des comédiens</h2>
+                
+                <div style="margin-bottom: 20px;">
+                    <button class="btn btn-small btn-secondary" onclick="openModal('absencesModal')">📅 Voir les absences</button>
+                </div>
+
+                <!-- ════════════════════════════════════════════
+                     PANNEAU SÉLECTION — toujours visible en haut
+                     ════════════════════════════════════════════ -->
+                <div id="studioSelectionPanel" style="
+                    margin-bottom: 28px;
+                    border-radius: 14px;
+                    border: 2px solid var(--accent);
+                    background: linear-gradient(135deg, rgba(233,69,96,0.07), rgba(78,204,163,0.05));
+                    overflow: hidden;
+                ">
+                    <!-- En-tête cliquable (collapse) -->
+                    <div onclick="toggleSelectionPanel()" style="
+                        display: flex; align-items: center; justify-content: space-between;
+                        padding: 14px 20px; cursor: pointer;
+                        background: linear-gradient(90deg, rgba(233,69,96,0.15), transparent);
+                        user-select: none;
+                    ">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <span style="font-size:1.3em;">🎙️</span>
+                            <div>
+                                <strong style="font-size:1.05em; color:var(--accent-light);">Ma Sélection</strong>
+                                <span id="selectionPanelBadge" style="
+                                    display:inline-block; margin-left:8px;
+                                    background:var(--accent); color:#fff;
+                                    font-size:0.75em; font-weight:700;
+                                    padding:2px 9px; border-radius:12px; vertical-align:middle;
+                                ">0</span>
+                            </div>
+                            <span id="selectionPanelStatus" style="color:var(--text-muted); font-size:0.9em; font-style:italic;">
+                                Aucun comédien sélectionné
+                            </span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+<button id="selectionClearBtn" onclick="event.stopPropagation(); clearStudioSelection()"
+                                    style="display:none; background:rgba(255,107,107,0.2); color:#ff6b6b;
+                                           border:1px solid #ff6b6b; padding:8px 14px; border-radius:8px;
+                                           font-weight:600; cursor:pointer; font-size:0.85em;">
+                                🗑️ Vider
+                            </button>
+                            <span id="selectionPanelChevron" style="color:var(--accent); font-size:1.2em; transition:transform 0.3s;">▼</span>
+                        </div>
+                    </div>
+
+                    <!-- Corps — liste des comédiens sélectionnés -->
+                    <div id="selectionPanelBody" style="display:none; padding:0 20px 18px;">
+                        <!-- Vide -->
+                        <div id="selectionPanelEmpty" style="
+                            text-align:center; padding:30px 20px; color:var(--text-muted);
+                        ">
+                            <div style="font-size:2.5em; margin-bottom:10px; opacity:0.4;">🎙️</div>
+                            <p style="font-size:0.95em;">Cochez des comédiens dans le catalogue ci-dessous<br>pour les ajouter à votre sélection.</p>
+                        </div>
+                        <!-- Liste -->
+                        <div id="selectionPanelList" style="display:none; margin-top:4px;">
+                            <!-- Cartes miniatures dynamiques -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="filters">
+                    <h3>🔍 Filtres de recherche</h3>
+                    <div class="filter-row">
+                        <div class="form-group">
+                            <label>Recherche par nom</label>
+                            <input type="text" id="searchName" placeholder="Nom du comédien..." oninput="applyFiltersStudio(true)">
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin: 20px 0 10px; color: var(--text); font-size: 1em;">👤 Genre</h4>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterFemme" value="Femme" onchange="applyFiltersStudio()"> Femme
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterHomme" value="Homme" onchange="applyFiltersStudio()"> Homme
+                        </label>
+                    </div>
+                    
+                    <h4 style="margin: 20px 0 10px; color: var(--text); font-size: 1em;">🎭 Compétences</h4>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterSeances" value="seances" onchange="applyFiltersStudio()"> Séances dirigées
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterVoixOff" value="voix_off" onchange="applyFiltersStudio()"> Voix off
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterVoixJouee" value="voix_jouee" onchange="applyFiltersStudio()"> Voix jouée
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterVoixEnfant" value="voix_enfant" onchange="applyFiltersStudio()"> Voix enfant
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterChant" value="chant" onchange="applyFiltersStudio()"> Chant
+                        </label>
+                    </div>
+                    
+                    <h4 style="margin: 20px 0 10px; color: var(--accent); font-size: 1em;">🎤 Type de voix</h4>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterVoixJeune" onchange="applyFiltersStudio()"> Voix jeune
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterVoixAdulte" onchange="applyFiltersStudio()"> Voix adulte
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterVoixMature" onchange="applyFiltersStudio()"> Voix mature
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterVoixAccent" onchange="applyFiltersStudio()"> Voix avec accent
+                        </label>
+                    </div>
+                    
+                    <h4 style="margin: 20px 0 10px; color: var(--accent); font-size: 1em;">🎵 Timbre</h4>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterTimbreGrave" onchange="applyFiltersStudio()"> Voix grave
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterTimbreMedium" onchange="applyFiltersStudio()"> Voix médium
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterTimbreAigu" onchange="applyFiltersStudio()"> Voix aigu
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterTimbreTexture" onchange="applyFiltersStudio()"> Voix texturée
+                        </label>
+                    </div>
+                    
+                    <h4 style="margin: 20px 0 10px; color: var(--accent); font-size: 1em;">🎬 Ton</h4>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterStyleDynamique" onchange="applyFiltersStudio()"> Promo
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterStylePose" onchange="applyFiltersStudio()"> Posé
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterStyleNaturel" onchange="applyFiltersStudio()"> Naturel
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterStyleInstitutionnel" onchange="applyFiltersStudio()"> Institutionnel
+                        </label>
+                    </div>
+                    
+                    <h4 style="margin: 20px 0 10px; color: var(--accent); font-size: 1em;">🏷️ Filtres spéciaux</h4>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label" style="background: rgba(233, 69, 96, 0.1); border: 1px solid var(--accent);">
+                            <input type="checkbox" id="filterInterne" value="interne" onchange="applyFiltersStudio()"> 
+                            <span style="color: var(--accent); font-weight: 600;">Classement Interne</span>
+                        </label>
+                        <label class="checkbox-label" style="background: rgba(233, 69, 96, 0.1); border: 1px solid var(--accent);">
+                            <input type="checkbox" id="filterExterne" value="externe" onchange="applyFiltersStudio()"> 
+                            <span style="color: var(--accent); font-weight: 600;">Classement Externe</span>
+                        </label>
+                        <label class="checkbox-label" style="background: rgba(255, 107, 107, 0.1); border: 1px solid #ff6b6b;">
+                            <input type="checkbox" id="filterVoixUrgente" onchange="applyFiltersStudio()"> 
+                            <span style="color: #ff6b6b; font-weight: 600;">🔥 Voix urgente</span>
+                        </label>
+                    </div>
+                    
+                    <div style="margin-top: 15px;">
+                        <label class="checkbox-label" style="background: rgba(78, 204, 163, 0.1); border: 1px solid var(--success);">
+                            <input type="checkbox" id="filterDisponibilite" onchange="toggleDisponibiliteFilter()"> 
+                            <span style="color: var(--success); font-weight: 600;">Disponibilité</span>
+                        </label>
+                    </div>
+                    
+                    <div id="disponibiliteSelector" class="hidden" style="margin-top: 15px; padding: 15px; background: rgba(78, 204, 163, 0.05); border-radius: 8px; border: 1px solid var(--success);">
+                        <div class="form-group">
+                            <label>Date de début</label>
+                            <input type="date" id="dispoDateStart" onchange="applyFiltersStudio()">
+                        </div>
+                        <div class="form-group">
+                            <label>Date de fin</label>
+                            <input type="date" id="dispoDateEnd" onchange="applyFiltersStudio()">
+                        </div>
+                        <p style="color: var(--success); font-size: 0.85em; margin-top: 10px;">
+                            ✓ Affiche uniquement les comédiens sans absence sur cette période
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Bouton réinitialiser filtres Studio -->
+                <div style="margin-top: 18px; padding-top: 15px; border-top: 2px dashed var(--border);">
+                    <button class="btn btn-small" onclick="resetFiltersStudio()" style="background: #6c757d; color: #fff; width: 100%; font-size: 0.95em; padding: 10px;">
+                        🔄 Réinitialiser tous les filtres
+                    </button>
+                </div>
+
+                <!-- Comedians Grid -->
+                <div class="cards-grid" id="comediansGrid"></div>
+                
+                <!-- Empty state message -->
+                <div id="emptyState" class="empty-state">
+                    <div class="icon">🔍</div>
+                    <h3>Commencez votre recherche</h3>
+                    <p>Utilisez les filtres ci-dessus pour rechercher des comédiens</p>
+                </div>
+            </div>
+
+            <!-- Client Content -->
+            <div id="clientContent" class="hidden">
+                <h2 class="section-title">📋 Catalogue des comédiens</h2>
+
+                <!-- ════════════════════════════════════════════
+                     PANNEAU SÉLECTION CLIENT — toujours visible
+                     ════════════════════════════════════════════ -->
+                <div id="clientSelectionPanel" style="
+                    margin-bottom: 28px;
+                    border-radius: 14px;
+                    border: 2px solid var(--border);
+                    background: linear-gradient(135deg, rgba(233,69,96,0.06), rgba(78,204,163,0.04));
+                    overflow: hidden;
+                    transition: border-color 0.3s;
+                ">
+                    <!-- En-tête cliquable -->
+                    <div onclick="toggleClientSelectionPanel()" style="
+                        display:flex; align-items:center; justify-content:space-between;
+                        padding:14px 20px; cursor:pointer;
+                        background:rgba(233,69,96,0.08);
+                        user-select:none;
+                    ">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <span style="font-size:1.3em;">🛒</span>
+                            <div>
+                                <strong style="font-size:1.05em; color:var(--accent-light);">Ma Sélection</strong>
+                                <span id="clientSelectionBadge" style="
+                                    display:inline-block; margin-left:8px;
+                                    background:#555; color:#fff;
+                                    font-size:0.75em; font-weight:700;
+                                    padding:2px 9px; border-radius:12px; vertical-align:middle;
+                                ">0</span>
+                            </div>
+                            <span id="clientSelectionStatus" style="color:var(--text-muted); font-size:0.9em; font-style:italic;">
+                                Aucun comédien sélectionné
+                            </span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <button id="clientSendBtn" onclick="event.stopPropagation(); openClientBasketSend()"
+                                    style="display:none; background:var(--success); color:#1a1a2e;
+                                           border:none; padding:8px 16px; border-radius:8px;
+                                           font-weight:700; cursor:pointer; font-size:0.9em;">
+                                📧 Envoyer au studio
+                            </button>
+                            <button id="clientClearBtn" onclick="event.stopPropagation(); clearClientSelection()"
+                                    style="display:none; background:rgba(255,107,107,0.15); color:#ff6b6b;
+                                           border:1px solid #ff6b6b; padding:8px 14px; border-radius:8px;
+                                           font-weight:600; cursor:pointer; font-size:0.85em;">
+                                🗑️ Vider
+                            </button>
+                            <span id="clientSelectionChevron" style="color:var(--accent); font-size:1.2em; transition:transform 0.3s;">▼</span>
+                        </div>
+                    </div>
+                    <!-- Corps -->
+                    <div id="clientSelectionBody" style="display:none; padding:0 20px 18px;">
+                        <div id="clientSelectionEmpty" style="text-align:center; padding:28px 20px; color:var(--text-muted);">
+                            <div style="font-size:2.2em; opacity:0.35; margin-bottom:8px;">🛒</div>
+                            <p style="font-size:0.9em;">Cochez des comédiens dans le catalogue ci-dessous.</p>
+                        </div>
+                        <div id="clientSelectionList" style="display:none;"></div>
+                    </div>
+                </div>
+
+                <!-- Mode d'emploi compact -->
+                <div style="background:rgba(22,33,62,0.5); padding:15px 20px; border-radius:10px; margin-bottom:25px; border-left:4px solid var(--accent);">
+                    <div style="display:flex; gap:20px; flex-wrap:wrap; justify-content:space-around; font-size:0.88em; color:var(--text-muted);">
+                        <span>🔍 <strong style="color:var(--text);">Filtrez</strong> via les critères</span>
+                        <span>✅ <strong style="color:var(--text);">Cochez</strong> sur chaque vignette</span>
+                        <span>🎵 <strong style="color:var(--text);">Écoutez</strong> depuis la sélection</span>
+                        <span>📧 <strong style="color:var(--text);">Envoyez</strong> au studio</span>
+                    </div>
+                </div>
+                
+                <!-- Filters -->
+                <div class="filters">
+                    <h3>Filtres de recherche</h3>
+                    
+                    <div class="filter-row">
+                        <div class="form-group">
+                            <label>Recherche par prénom</label>
+                            <input type="text" id="searchNameClient" placeholder="Prénom du comédien..." oninput="applyFiltersClient(true)">
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin: 20px 0 10px; color: var(--text); font-size: 1em;">👤 Genre</h4>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterFemmeClient" onchange="applyFiltersClient()"> Femme
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterHommeClient" onchange="applyFiltersClient()"> Homme
+                        </label>
+                    </div>
+                    
+                    <h4 style="margin: 20px 0 10px; color: var(--text); font-size: 1em;">🎭 Compétences</h4>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterVoixOffClient" onchange="applyFiltersClient()"> Voix off
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterVoixJoueeClient" onchange="applyFiltersClient()"> Voix jouée
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterVoixEnfantClient" onchange="applyFiltersClient()"> Voix enfant
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterChantClient" onchange="applyFiltersClient()"> Chant
+                        </label>
+                    </div>
+                    
+                    <h4 style="margin: 20px 0 10px; color: var(--accent); font-size: 1em;">🎤 Type de voix</h4>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterVoixJeuneClient" onchange="applyFiltersClient()"> Voix jeune
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterVoixAdulteClient" onchange="applyFiltersClient()"> Voix adulte
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterVoixMatureClient" onchange="applyFiltersClient()"> Voix mature
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterVoixAccentClient" onchange="applyFiltersClient()"> Voix avec accent
+                        </label>
+                    </div>
+                    
+                    <h4 style="margin: 20px 0 10px; color: var(--accent); font-size: 1em;">🎵 Timbre</h4>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterTimbreGraveClient" onchange="applyFiltersClient()"> Voix grave
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterTimbreMediumClient" onchange="applyFiltersClient()"> Voix médium
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterTimbreAiguClient" onchange="applyFiltersClient()"> Voix aigu
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterTimbreTextureClient" onchange="applyFiltersClient()"> Voix texturée
+                        </label>
+                    </div>
+                    
+                    <h4 style="margin: 20px 0 10px; color: var(--accent); font-size: 1em;">🎬 Ton</h4>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterStyleDynamiqueClient" onchange="applyFiltersClient()"> Promo
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterStylePoseClient" onchange="applyFiltersClient()"> Posé
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterStyleNaturelClient" onchange="applyFiltersClient()"> Naturel
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filterStyleInstitutionnelClient" onchange="applyFiltersClient()"> Institutionnel
+                        </label>
+                    </div>
+
+                    <!-- Bouton réinitialiser filtres Client -->
+                    <div style="margin-top: 18px; padding-top: 15px; border-top: 2px dashed var(--border);">
+                        <button class="btn btn-small" onclick="resetFiltersClient()" style="background: #6c757d; color: #fff; width: 100%; font-size: 0.95em; padding: 10px;">
+                            🔄 Réinitialiser tous les filtres
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="cards-grid" id="comediansGridClient"></div>
+                
+                <div id="emptyStateClient" class="empty-state">
+                    <div class="icon">🔍</div>
+                    <h3>Commencez votre recherche</h3>
+                    <p>Utilisez les filtres ci-dessus pour rechercher des comédiens</p>
+                </div>
+            </div>
+
+            <!-- Comedian Profile View -->
+            <div id="comedianContent" class="hidden">
+                <h2 class="section-title">Mon profil comédien</h2>
+                
+                <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                    <button class="btn btn-small" onclick="openEditComedianProfile()">✏️ Modifier mon profil</button>
+                    <button class="btn btn-small btn-absence-add" onclick="openQuickAbsence()">📅 Ajouter une absence</button>
+                    <button class="btn btn-small" onclick="openAudioUpload('presentation')" style="background:#8e44ad;">🎤 Présentation audio</button>
+                    <button class="btn btn-small" onclick="openAudioUpload('demo_promo')" style="background:#e67e22;">📣 Démo promo</button>
+                    <button class="btn btn-small" onclick="openAudioUpload('demo_joue')" style="background:#2980b9;">🎭 Démo jouée</button>
+                    <button class="btn btn-small" onclick="openAudioUpload('demo_instit')" style="background:#16a085;">🏛️ Démo instit.</button>
+                    <button class="btn btn-small" onclick="openMFTDelivery()" style="background:#c0392b; display:flex; align-items:center; gap:6px;">
+                        📦 Livraison des enregistrements
+                    </button>
+                </div>
+                
+                <div id="comedianProfile"></div>
+            </div>
+
+            <!-- Modal Livraison MFT -->
+            <div id="mftDeliveryModal" class="modal">
+                <div class="modal-content" style="max-width:480px;">
+                    <div class="modal-header">
+                        <h2>📦 Livraison des enregistrements</h2>
+                        <button class="modal-close" onclick="closeModal('mftDeliveryModal')">×</button>
+                    </div>
+                    <div style="padding:20px;">
+                        <p style="margin-bottom:18px; color:var(--text-muted); line-height:1.6;">
+                            La plateforme de livraison des enregistrements est hébergée sur le serveur NRJ Group.<br>
+                            Cliquez sur le bouton ci-dessous pour accéder à la page de connexion.
+                        </p>
+                        <a href="https://mft.nrjgroup.fr/login" target="_blank" rel="noopener"
+                           style="display:block; text-align:center; padding:12px 20px; background:#c0392b; color:#fff; border-radius:8px; font-weight:600; text-decoration:none; margin-bottom:24px;">
+                            🔗 Accéder à la plateforme de livraison
+                        </a>
+                        <hr style="border:none; border-top:1px solid var(--border); margin-bottom:20px;">
+                        <p style="font-size:0.9em; color:var(--text-muted); margin-bottom:12px;">
+                            🔑 <strong>Identifiants perdus ou accès refusé ?</strong><br>
+                            Envoyez une demande à l'administrateur.
+                        </p>
+                        <button class="btn" onclick="requestMFTAccess()" style="width:100%; background:#2c3e50;">
+                            📧 Demander mes identifiants à l'admin
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vue Partagée (accès sans login via ?share=TOKEN) -->
+            <div id="sharedView" class="hidden"></div>
+        </div>
+    </div>
+
+    <!-- Modal Envoi Sélection Studio -->
+    <div id="sendSelectionModal" class="modal">
+        <div class="modal-content" style="max-width: 620px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h2>📧 Envoyer la sélection au client</h2>
+                <button class="close-btn" onclick="closeModal('sendSelectionModal')">&times;</button>
+            </div>
+            <div style="padding: 5px 0;">
+
+                <!-- Récap de la sélection -->
+                <div style="margin-bottom:20px; padding:14px; background:rgba(22,33,62,0.8); border:1px solid var(--border); border-radius:10px;">
+                    <p style="font-size:0.8em; font-weight:700; color:var(--accent-light); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px;">
+                        🎙️ Comédiens sélectionnés
+                    </p>
+                    <div id="sendModalSelectionRecap" style="max-height:180px; overflow-y:auto;">
+                        <!-- Rempli dynamiquement -->
+                    </div>
+                </div>
+
+                <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.9em; padding:10px; background:rgba(78,204,163,0.06); border-radius:8px; border-left:3px solid var(--success);">
+                    🔗 Un lien unique sera généré — le client pourra écouter les audios <strong>sans connexion</strong>.
+                </p>
+
+                <div class="form-group">
+                    <label>📬 Adresse email du client <span style="color:var(--accent);">*</span></label>
+                    <input type="email" id="sendSelectionEmail" placeholder="client@exemple.com" style="width:100%;">
+                </div>
+
+                <div class="form-group">
+                    <label>💬 Message personnalisé <small style="color:var(--text-muted); font-weight:normal;">(optionnel)</small></label>
+                    <textarea id="sendSelectionMessage" rows="3" placeholder="Ex: Voici notre sélection pour votre projet..."
+                              style="width:100%; resize:vertical;"></textarea>
+                </div>
+
+                <button class="btn" onclick="sendStudioSelection()" style="width:100%; margin-top:5px; font-size:1em; padding:14px;">
+                    🚀 Envoyer &amp; Générer le lien
+                </button>
+
+                <!-- Section lien généré -->
+                <div id="sendSelectionLinkSection" style="display:none; margin-top:20px; padding:16px; background:rgba(78,204,163,0.1); border:1px solid var(--success); border-radius:10px;">
+                    <p style="font-weight:700; color:var(--success); margin:0 0 10px;">✅ Email ouvert et lien généré !</p>
+                    <p style="font-size:0.85em; color:var(--text-muted); margin:0 0 8px;">Lien à partager directement :</p>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <code id="generatedShareLink" style="flex:1; font-size:0.78em; background:rgba(0,0,0,0.2); padding:8px 10px; border-radius:6px; word-break:break-all; color:#4ecca3;"></code>
+                        <button class="btn btn-small" onclick="copyShareLink()" style="flex-shrink:0; background:var(--success); padding:8px 12px;" title="Copier le lien">📋</button>
+                    </div>
+                    <p style="font-size:0.8em; color:var(--text-muted); margin:8px 0 0;">⚠️ Ce lien est accessible sans connexion. Partagez-le uniquement avec votre client.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create User Modal -->
+    <div id="createUserModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Créer un utilisateur</h2>
+                <button class="close-btn" onclick="closeModal('createUserModal')">&times;</button>
+            </div>
+            <form id="createUserForm">
+                <div class="form-group">
+                    <label>Identifiant</label>
+                    <input type="text" id="newUsername" required>
+                </div>
+                <div class="form-group">
+                    <label>Mot de passe</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="newPassword" required style="flex: 1; font-family: monospace; letter-spacing: 1px;">
+                        <button type="button" class="btn btn-small" onclick="generateUserPassword()" id="generatePwdBtn" style="white-space: nowrap;">
+                            🔐 Générer
+                        </button>
+                    </div>
+                    <small style="color: var(--text-muted);">Minimum 8 caractères. "Générer" crée un mot de passe sécurisé et le copie automatiquement.</small>
+                </div>
+                <div class="form-group">
+                    <label>Rôle</label>
+                    <select id="newUserRole" required>
+                        <option value="client">Client</option>
+                        <option value="studio">Équipe studio</option>
+                        <option value="manager">Manager</option>
+                        <option value="comedian">Comédien</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div class="form-group" id="comedianSelectGroup" style="display: none;">
+                    <label>Associer à un comédien existant</label>
+                    <select id="newUserComedianId"></select>
+                </div>
+                <button type="submit" class="btn">Créer</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Create Comedian Modal -->
+    <div id="createComedianModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Créer une fiche comédien</h2>
+                <button class="close-btn" onclick="closeModal('createComedianModal')">&times;</button>
+            </div>
+            <form id="createComedianForm">
+                <div class="form-group">
+                    <label>Nom complet</label>
+                    <input type="text" id="comedianName" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="comedianEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>Sexe</label>
+                    <select id="comedianSexe" required>
+                        <option value="Homme">Homme</option>
+                        <option value="Femme">Femme</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Téléphone</label>
+                    <input type="tel" id="comedianPhone">
+                </div>
+                <div class="form-group">
+                    <label>🏢 Classement (Base de données)</label>
+                    <select id="comedianClassement" style="background: rgba(233, 69, 96, 0.1); border: 2px solid var(--accent);">
+                        <option value="">Aucun classement</option>
+                        <option value="interne">🏠 Interne (Base interne)</option>
+                        <option value="externe">🌍 Externe (Base externe)</option>
+                    </select>
+                    <small style="color: var(--text-muted);">Détermine dans quelle base le comédien apparaîtra</small>
+                </div>
+                <div class="checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="comedianSeances"> Séances dirigées
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="comedianVoixOff"> Voix off
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="comedianVoixJouee"> Voix jouée
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="comedianVoixEnfant"> Voix enfant
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="comedianChant"> Chant
+                    </label>
+                </div>
+                
+                <h3 style="margin: 25px 0 15px; color: var(--accent);">🎤 Caractéristiques vocales</h3>
+                
+                <div class="form-group">
+                    <label>Type de voix</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="comedianVoixJeune"> Voix jeune
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="comedianVoixAdulte"> Voix adulte
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="comedianVoixMature"> Voix mature
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="comedianVoixAccent"> Voix avec accent
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Timbre</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="comedianTimbreGrave"> Voix grave
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="comedianTimbreMedium"> Voix médium
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="comedianTimbreAigu"> Voix aigu
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="comedianTimbreTexture"> Voix texturée
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Style</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="comedianStyleDynamique"> Promo
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="comedianStylePose"> Posé
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="comedianStyleNaturel"> Naturel
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="comedianStyleInstitutionnel"> Institutionnel
+                        </label>
+                    </div>
+                </div>
+                
+                <div style="margin: 20px 0; padding: 15px; background: rgba(255, 107, 107, 0.1); border-radius: 8px; border-left: 4px solid #ff6b6b;">
+                    <label class="checkbox-label" style="background: transparent; border: none;">
+                        <input type="checkbox" id="comedianVoixUrgente">
+                        <span style="color: #ff6b6b; font-weight: 600;">🔥 Voix urgente</span>
+                    </label>
+                    <p style="font-size: 0.85em; color: var(--text-muted); margin-top: 5px;">
+                        Pour comédiens disponibles pour missions urgentes
+                    </p>
+                </div>
+                
+                <div class="form-group">
+                    <label>💬 Commentaire interne (visible admin/studio/manager uniquement)</label>
+                    <textarea id="comedianCommentaire" placeholder="Notes internes..."></textarea>
+                </div>
+                
+                <button type="submit" class="btn">Créer</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Comedian Modal (profil comédien : photo + présentation uniquement) -->
+    <div id="editComedianModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>✏️ Modifier mon profil</h2>
+                <button class="close-btn" onclick="closeModal('editComedianModal')">&times;</button>
+            </div>
+            <form id="editComedianForm" onsubmit="saveComedianProfile(event)">
+                <input type="hidden" id="editComedianId">
+                
+                <div class="form-group">
+                    <label>📸 Photo de profil</label>
+                    <div class="file-upload" onclick="document.getElementById('editProfilePic').click()">
+                        <p>Cliquer pour télécharger une photo</p>
+                        <small style="color: var(--text-muted);">Format JPG, PNG (max 5MB)</small>
+                        <input type="file" id="editProfilePic" accept="image/*" style="display:none;">
+                    </div>
+                    <img id="editProfilePreview" style="max-width: 200px; margin-top: 15px; display: none; border-radius: 10px; border: 2px solid var(--accent);">
+                </div>
+                
+                <div class="form-group">
+                    <label>✍️ Message de présentation</label>
+                    <textarea id="editPresentation" rows="5" placeholder="Parlez de vous, de votre expérience, de vos spécialités..."></textarea>
+                </div>
+                
+                <button type="submit" class="btn" style="width:100%; margin-top:10px;">💾 Sauvegarder</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Audio Upload -->
+    <div id="audioUploadModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header" style="flex-wrap:wrap; gap:4px;">
+                <h2 id="audioUploadTitle" style="flex:1; min-width:0;">🎵 Ajouter un fichier audio</h2>
+                <button class="close-btn" onclick="closeModal('audioUploadModal')">&times;</button>
+                <p id="audioUploadHint" style="width:100%; color:var(--text-muted); font-size:0.82em; margin:0; padding-top:4px; border-top:none;">Format MP3 uniquement — durée maximale : 1 min</p>
+            </div>
+            <div style="padding: 10px 0;">
+
+                <div class="form-group">
+                    <label>Fichier MP3</label>
+                    <div class="file-upload" onclick="document.getElementById('audioFileInput').click()" id="audioDropZone"
+                         style="cursor:pointer; padding: 30px; text-align:center;">
+                        <p>🎵 Cliquez pour sélectionner un MP3</p>
+                        <small id="audioDropHint" style="color: var(--text-muted);">Format MP3 uniquement</small>
+                        <input type="file" id="audioFileInput" accept="audio/mp3,audio/mpeg,.mp3" style="display:none;">
+                    </div>
+                </div>
+
+                <div id="audioValidationMsg" style="display:none; padding: 12px; border-radius: 8px; margin-top: 10px; font-weight: 600;"></div>
+
+                <div id="audioPreviewSection" style="display:none; margin-top: 15px;">
+                    <p style="color: var(--success); margin-bottom: 8px;">✅ Fichier valide — aperçu :</p>
+                    <audio id="audioUploadPreview" controls style="width:100%;"></audio>
+                    <p id="audioFilename" style="color: var(--text-muted); font-size: 0.85em; margin-top: 8px;"></p>
+                </div>
+
+                <div style="margin:14px 0 0; padding:10px 14px; background:rgba(78,204,163,0.08); border:1px solid rgba(78,204,163,0.25); border-radius:8px;">
+                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:0.88em;">
+                        <input type="checkbox" id="audioNormalizeCheck" style="width:16px;height:16px;">
+                        <span>🎚️ Normaliser le volume <span style="color:var(--text-muted);">(-14 LUFS — recommandé)</span></span>
+                    </label>
+                </div>
+                <div style="display:flex; gap:10px; margin-top:14px;">
+                    <button class="btn btn-secondary" onclick="closeModal('audioUploadModal')" style="flex:1;">Annuler</button>
+                    <button class="btn" id="audioConfirmBtn" onclick="confirmAudioUpload()" style="flex:2;" disabled>
+                        💾 Enregistrer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Comedian Admin Modal -->
+    <div id="editComedianAdminModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Modifier la fiche comédien</h2>
+                <button class="close-btn" onclick="closeModal('editComedianAdminModal')">&times;</button>
+            </div>
+            <form id="editComedianAdminForm">
+                <input type="hidden" id="editAdminComedianId">
+                
+                <div class="form-group">
+                    <label>Nom complet</label>
+                    <input type="text" id="editAdminName" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="editAdminEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>Sexe</label>
+                    <select id="editAdminSexe" required>
+                        <option value="Homme">Homme</option>
+                        <option value="Femme">Femme</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Téléphone</label>
+                    <input type="tel" id="editAdminPhone">
+                </div>
+                
+                <div class="form-group">
+                    <label>🏢 Classement (Base de données)</label>
+                    <select id="editAdminClassement" style="background: rgba(233, 69, 96, 0.1); border: 2px solid var(--accent);">
+                        <option value="">Aucun classement</option>
+                        <option value="interne">🏠 Interne (Base interne)</option>
+                        <option value="externe">🌍 Externe (Base externe)</option>
+                    </select>
+                    <small style="color: var(--text-muted);">Détermine dans quelle base le comédien apparaît</small>
+                </div>
+                
+                <h3 style="color: var(--accent-light); margin: 20px 0 15px;">Compétences</h3>
+                <div class="checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="editAdminSeances"> Séances dirigées
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="editAdminVoixOff"> Voix off
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="editAdminVoixJouee"> Voix jouée
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="editAdminVoixEnfant"> Voix enfant
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="editAdminChant"> Chant
+                    </label>
+                </div>
+                
+                <h3 style="margin: 25px 0 15px; color: var(--accent);">🎤 Caractéristiques vocales</h3>
+                
+                <div class="form-group">
+                    <label>Type de voix</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="editAdminVoixJeune"> Voix jeune
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="editAdminVoixAdulte"> Voix adulte
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="editAdminVoixMature"> Voix mature
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="editAdminVoixAccent"> Voix avec accent
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Timbre</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="editAdminTimbreGrave"> Voix grave
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="editAdminTimbreMedium"> Voix médium
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="editAdminTimbreAigu"> Voix aigu
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="editAdminTimbreTexture"> Voix texturée
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Style</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="editAdminStyleDynamique"> Promo
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="editAdminStylePose"> Posé
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="editAdminStyleNaturel"> Naturel
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="editAdminStyleInstitutionnel"> Institutionnel
+                        </label>
+                    </div>
+                </div>
+                
+                <div style="margin: 20px 0; padding: 15px; background: rgba(255, 107, 107, 0.1); border-radius: 8px; border-left: 4px solid #ff6b6b;">
+                    <label class="checkbox-label" style="background: transparent; border: none;">
+                        <input type="checkbox" id="editAdminVoixUrgente">
+                        <span style="color: #ff6b6b; font-weight: 600;">🔥 Voix urgente</span>
+                    </label>
+                    <p style="font-size: 0.85em; color: var(--text-muted); margin-top: 5px;">
+                        Pour comédiens disponibles pour missions urgentes
+                    </p>
+                </div>
+                
+                <div class="form-group">
+                    <label>💬 Commentaire interne (visible admin/studio/manager uniquement)</label>
+                    <textarea id="editAdminCommentaire" rows="3" placeholder="Notes internes..."></textarea>
+                </div>
+                
+                <hr style="border: none; border-top: 1px solid var(--border); margin: 30px 0;">
+                
+                <div class="form-group">
+                    <label>📸 Photo de profil</label>
+                    <div class="file-upload" onclick="document.getElementById('editAdminProfilePic').click()">
+                        <p>Cliquer pour télécharger une photo</p>
+                        <small style="color: var(--text-muted);">Format JPG, PNG (max 5MB)</small>
+                        <input type="file" id="editAdminProfilePic" accept="image/*">
+                    </div>
+                    <img id="editAdminProfilePreview" style="max-width: 200px; margin-top: 15px; display: none; border-radius: 10px; border: 2px solid var(--accent);">
+                </div>
+                
+                <div class="form-group">
+                    <label>🎤 Présentation audio (MP3)</label>
+                    <div id="adminAudioPresBlock" style="padding:10px; background:rgba(78,204,163,0.07); border:1px solid rgba(78,204,163,0.2); border-radius:8px;">
+                        <p id="adminAudioPresStatus" style="color:var(--text-muted); font-size:0.9em; margin-bottom:8px;">Aucune présentation audio</p>
+                        <audio id="adminAudioPresPreview" controls style="width:100%; display:none; margin-bottom:8px;"></audio>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button type="button" class="btn btn-small" onclick="openAudioUploadAdmin('presentation')" style="background:#8e44ad;">
+                                🎤 Ajouter / Remplacer
+                            </button>
+                            <button type="button" class="btn btn-small" onclick="deleteAudioAdmin('presentation')" style="background:#c0392b;">
+                                🗑️ Supprimer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>🎵 Démo audio — ancienne (MP3)</label>
+                    <div id="adminAudioDemoBlock" style="padding:10px; background:rgba(78,204,163,0.07); border:1px solid rgba(78,204,163,0.2); border-radius:8px;">
+                        <p id="adminAudioDemoStatus" style="color:var(--text-muted); font-size:0.9em; margin-bottom:8px;">Aucune démo audio</p>
+                        <audio id="adminAudioDemoPreview" controls style="width:100%; display:none; margin-bottom:8px;"></audio>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button type="button" class="btn btn-small" onclick="openAudioUploadAdmin('demo')" style="background:#27ae60;">
+                                🎵 Ajouter / Remplacer
+                            </button>
+                            <button type="button" class="btn btn-small" onclick="deleteAudioAdmin('demo')" style="background:#c0392b;">
+                                🗑️ Supprimer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>📣 Démo promo (MP3, max 1 min)</label>
+                    <div id="adminAudioDemoPromoBlock" style="padding:10px; background:rgba(230,126,34,0.07); border:1px solid rgba(230,126,34,0.2); border-radius:8px;">
+                        <p id="adminAudioDemoPromoStatus" style="color:var(--text-muted); font-size:0.9em; margin-bottom:8px;">Aucune démo promo</p>
+                        <audio id="adminAudioDemoPromoPreview" controls style="width:100%; display:none; margin-bottom:8px;"></audio>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button type="button" class="btn btn-small" onclick="openAudioUploadAdmin('demo_promo')" style="background:#e67e22;">
+                                📣 Ajouter / Remplacer
+                            </button>
+                            <button type="button" class="btn btn-small" onclick="deleteAudioAdmin('demo_promo')" style="background:#c0392b;">
+                                🗑️ Supprimer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>🎭 Démo jouée (MP3, max 1 min)</label>
+                    <div id="adminAudioDemoJoueBlock" style="padding:10px; background:rgba(41,128,185,0.07); border:1px solid rgba(41,128,185,0.2); border-radius:8px;">
+                        <p id="adminAudioDemoJoueStatus" style="color:var(--text-muted); font-size:0.9em; margin-bottom:8px;">Aucune démo jouée</p>
+                        <audio id="adminAudioDemoJouePreview" controls style="width:100%; display:none; margin-bottom:8px;"></audio>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button type="button" class="btn btn-small" onclick="openAudioUploadAdmin('demo_joue')" style="background:#2980b9;">
+                                🎭 Ajouter / Remplacer
+                            </button>
+                            <button type="button" class="btn btn-small" onclick="deleteAudioAdmin('demo_joue')" style="background:#c0392b;">
+                                🗑️ Supprimer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>🏛️ Démo institutionnelle (MP3, max 1 min)</label>
+                    <div id="adminAudioDemoInstitBlock" style="padding:10px; background:rgba(22,160,133,0.07); border:1px solid rgba(22,160,133,0.2); border-radius:8px;">
+                        <p id="adminAudioDemoInstitStatus" style="color:var(--text-muted); font-size:0.9em; margin-bottom:8px;">Aucune démo institutionnelle</p>
+                        <audio id="adminAudioDemoInstitPreview" controls style="width:100%; display:none; margin-bottom:8px;"></audio>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button type="button" class="btn btn-small" onclick="openAudioUploadAdmin('demo_instit')" style="background:#16a085;">
+                                🏛️ Ajouter / Remplacer
+                            </button>
+                            <button type="button" class="btn btn-small" onclick="deleteAudioAdmin('demo_instit')" style="background:#c0392b;">
+                                🗑️ Supprimer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>✍️ Message de présentation</label>
+                    <textarea id="editAdminPresentation" rows="5" placeholder="Présentation du comédien..."></textarea>
+                </div>
+                
+                <hr style="border: none; border-top: 1px solid var(--border); margin: 30px 0;">
+                
+                <h3 style="color: var(--accent-light); margin-bottom: 15px;">📅 Gérer les absences</h3>
+                
+                <div class="form-group">
+                    <label>Date de début</label>
+                    <input type="date" id="editAdminAbsenceStart" placeholder="Cliquez pour ouvrir le calendrier">
+                    <small style="color: var(--text-muted); display: block; margin-top: 5px;">Cliquez pour ouvrir le calendrier</small>
+                </div>
+                <div class="form-group">
+                    <label>Date de fin</label>
+                    <input type="date" id="editAdminAbsenceEnd" placeholder="Cliquez pour ouvrir le calendrier">
+                    <small style="color: var(--text-muted); display: block; margin-top: 5px;">Cliquez pour ouvrir le calendrier</small>
+                </div>
+                <button type="button" class="btn btn-secondary" onclick="addAbsenceAdmin()">+ Ajouter une période d'absence</button>
+                
+                <div id="absencesListEditAdmin" style="margin-top: 20px;"></div>
+                
+                <button type="submit" class="btn" style="margin-top: 30px;">💾 Sauvegarder les modifications</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Quick Absence Modal (for comedian) -->
+    <div id="quickAbsenceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📅 Ajouter une absence</h2>
+                <button class="close-btn" onclick="closeModal('quickAbsenceModal')">&times;</button>
+            </div>
+            <form id="quickAbsenceForm">
+                <div class="form-group">
+                    <label>📆 Date de début</label>
+                    <input type="date" id="quickAbsenceStart" required placeholder="Cliquez pour ouvrir le calendrier">
+                    <small style="color: var(--text-muted); display: block; margin-top: 5px;">Cliquez sur le champ pour ouvrir le calendrier</small>
+                </div>
+                <div class="form-group">
+                    <label>🕐 Heure de début</label>
+                    <input type="time" id="quickAbsenceStartTime" value="09:00">
+                </div>
+                <div class="form-group">
+                    <label>📆 Date de fin</label>
+                    <input type="date" id="quickAbsenceEnd" required placeholder="Cliquez pour ouvrir le calendrier">
+                    <small style="color: var(--text-muted); display: block; margin-top: 5px;">Cliquez sur le champ pour ouvrir le calendrier</small>
+                </div>
+                <div class="form-group">
+                    <label>🕐 Heure de fin</label>
+                    <input type="time" id="quickAbsenceEndTime" value="18:00">
+                </div>
+                <div class="form-group">
+                    <label>💬 Commentaire (optionnel)</label>
+                    <textarea id="quickAbsenceComment" rows="3" placeholder="Ex: Tournage, vacances, maladie..."></textarea>
+                </div>
+                <button type="submit" class="btn">Ajouter l'absence</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🔑 Modifier le mot de passe</h2>
+                <button class="close-btn" onclick="closeModal('changePasswordModal')">&times;</button>
+            </div>
+            <form id="changePasswordForm">
+                <input type="hidden" id="changePasswordUserId">
+                <div class="form-group">
+                    <label>Utilisateur</label>
+                    <input type="text" id="changePasswordUsername" disabled style="opacity: 0.6;">
+                </div>
+                <div class="form-group">
+                    <label>Nouveau mot de passe</label>
+                    <input type="password" id="newPasswordInput" required minlength="4">
+                    <small style="color: var(--text-muted);">Minimum 4 caractères</small>
+                </div>
+                <div class="form-group">
+                    <label>Confirmer le mot de passe</label>
+                    <input type="password" id="confirmPasswordInput" required minlength="4">
+                </div>
+                <button type="submit" class="btn">Modifier le mot de passe</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Quick Absence Modal -->
+    <div id="adminQuickAbsenceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📅 Ajouter une absence</h2>
+                <button class="close-btn" onclick="closeModal('adminQuickAbsenceModal')">&times;</button>
+            </div>
+            <form id="adminQuickAbsenceForm">
+                <input type="hidden" id="adminAbsenceComedianId">
+                <div class="form-group" style="position: relative;">
+                    <label>🎭 Comédien</label>
+                    <input type="text" id="adminAbsenceComedianName" 
+                           placeholder="Tapez le nom du comédien..." 
+                           autocomplete="off"
+                           oninput="filterAbsenceComedianSearch(this.value)"
+                           onfocus="filterAbsenceComedianSearch(this.value)"
+                           style="width: 100%;">
+                    <div id="absenceComedianDropdown" style="
+                        display: none; position: absolute; top: 100%; left: 0; right: 0;
+                        background: var(--surface); border: 1px solid var(--border);
+                        border-radius: 8px; max-height: 200px; overflow-y: auto;
+                        z-index: 1000; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                        margin-top: 4px;
+                    "></div>
+                </div>
+                <div class="form-group">
+                    <label>📆 Date de début</label>
+                    <input type="date" id="adminQuickAbsenceStart" required placeholder="Cliquez pour ouvrir le calendrier">
+                    <small style="color: var(--text-muted); display: block; margin-top: 5px;">Cliquez sur le champ pour ouvrir le calendrier</small>
+                </div>
+                <div class="form-group">
+                    <label>🕐 Heure de début</label>
+                    <input type="time" id="adminQuickAbsenceStartTime" value="09:00">
+                </div>
+                <div class="form-group">
+                    <label>📆 Date de fin</label>
+                    <input type="date" id="adminQuickAbsenceEnd" required placeholder="Cliquez pour ouvrir le calendrier">
+                    <small style="color: var(--text-muted); display: block; margin-top: 5px;">Cliquez sur le champ pour ouvrir le calendrier</small>
+                </div>
+                <div class="form-group">
+                    <label>🕐 Heure de fin</label>
+                    <input type="time" id="adminQuickAbsenceEndTime" value="18:00">
+                </div>
+                <div class="form-group">
+                    <label>💬 Commentaire (optionnel)</label>
+                    <textarea id="adminQuickAbsenceComment" rows="3" placeholder="Ex: Tournage, vacances, maladie..."></textarea>
+                </div>
+                <button type="submit" class="btn">Ajouter l'absence</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Manager Quick Absence Modal -->
+    <div id="managerQuickAbsenceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📅 Ajouter une absence</h2>
+                <button class="close-btn" onclick="closeModal('managerQuickAbsenceModal')">&times;</button>
+            </div>
+            <form id="managerQuickAbsenceForm">
+                <input type="hidden" id="managerAbsenceComedianId">
+                <div class="form-group">
+                    <label>Comédien</label>
+                    <input type="text" id="managerAbsenceComedianName" disabled style="opacity: 0.6;">
+                </div>
+                <div class="form-group">
+                    <label>📆 Date de début</label>
+                    <input type="date" id="managerQuickAbsenceStart" required placeholder="Cliquez pour ouvrir le calendrier">
+                    <small style="color: var(--text-muted); display: block; margin-top: 5px;">Cliquez sur le champ pour ouvrir le calendrier</small>
+                </div>
+                <div class="form-group">
+                    <label>🕐 Heure de début</label>
+                    <input type="time" id="managerQuickAbsenceStartTime" value="09:00">
+                </div>
+                <div class="form-group">
+                    <label>📆 Date de fin</label>
+                    <input type="date" id="managerQuickAbsenceEnd" required placeholder="Cliquez pour ouvrir le calendrier">
+                    <small style="color: var(--text-muted); display: block; margin-top: 5px;">Cliquez sur le champ pour ouvrir le calendrier</small>
+                </div>
+                <div class="form-group">
+                    <label>🕐 Heure de fin</label>
+                    <input type="time" id="managerQuickAbsenceEndTime" value="18:00">
+                </div>
+                <div class="form-group">
+                    <label>💬 Commentaire (optionnel)</label>
+                    <textarea id="managerQuickAbsenceComment" rows="3" placeholder="Ex: Tournage, vacances, maladie..."></textarea>
+                </div>
+                <button type="submit" class="btn">Ajouter l'absence</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div id="editUserModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Modifier l'utilisateur</h2>
+                <button class="close-btn" onclick="closeModal('editUserModal')">&times;</button>
+            </div>
+            <form id="editUserForm" onsubmit="return false;">
+                <div class="form-group">
+                    <label>Identifiant</label>
+                    <input type="text" id="editUsername" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="editUserEmail">
+                </div>
+                <div class="form-group">
+                    <label>Nouveau mot de passe <small style="color:var(--text-muted); font-weight:normal;">(laisser vide pour ne pas changer)</small></label>
+                    <input type="text" id="editUserPassword" minlength="4" style="font-family: monospace; letter-spacing: 1px;" placeholder="Laisser vide pour conserver l'actuel" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label>Rôle</label>
+                    <select id="editUserRole" required>
+                        <option value="client">Client</option>
+                        <option value="studio">Équipe studio</option>
+                        <option value="manager">Manager</option>
+                        <option value="comedian">Comédien</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                
+                <div style="margin: 20px 0; padding: 15px; background: rgba(233, 69, 96, 0.1); border-radius: 8px; border-left: 4px solid var(--accent);">
+                    <h4 style="color: var(--accent); margin-bottom: 10px;">🔐 Générer nouveau mot de passe</h4>
+                    <p style="font-size: 0.9em; margin-bottom: 10px;">Génère un mot de passe sécurisé, l'affiche ci-dessous et le copie.</p>
+                    <button type="button" class="btn btn-small" onclick="generateNewPasswordForUser()" style="background: var(--warning);">
+                        🔄 Générer nouveau mot de passe
+                    </button>
+                    <div id="newPasswordDisplay" style="display: none; margin-top: 12px; padding: 10px; background: rgba(78,204,163,0.12); border: 1px solid #4ecca3; border-radius: 6px;">
+                        <strong>Mot de passe généré :</strong>
+                        <code id="newPasswordValue" style="font-size: 1.1em; color: #2ecc71; margin: 0 8px; font-family: monospace;"></code>
+                        <button type="button" class="btn-icon btn-small" onclick="copyNewPassword()" style="margin-left: 6px;">📋 Copier</button>
+                    </div>
+                </div>
+                
+                <button type="button" class="btn" onclick="saveEditUser()" style="width: 100%; margin-top: 10px;">
+                    💾 Mettre à jour
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Comedian Detail Modal -->
+    <div id="comedianDetailModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2>Détail du comédien</h2>
+                <button class="close-btn" onclick="closeModal('comedianDetailModal')">&times;</button>
+            </div>
+            <div id="comedianDetailContent"></div>
+        </div>
+    </div>
+
+    <!-- Absences Modal -->
+    <div id="absencesModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2>📅 Absences des comédiens</h2>
+                <button class="close-btn" onclick="closeModal('absencesModal')">&times;</button>
+            </div>
+            <div id="absencesModalContent"></div>
+        </div>
+    </div>
+
+    <!-- Urgent Request Modal -->
+    <div id="urgentRequestModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🚨 Demande de voix urgente</h2>
+                <button class="close-btn" onclick="closeModal('urgentRequestModal')">&times;</button>
+            </div>
+            <input type="hidden" id="urgentComedianId">
+            <div style="display:flex; gap:12px;">
+                <div class="form-group" style="flex:1; margin-bottom:0;">
+                    <label>N° ODP</label>
+                    <input type="text" id="urgentOdp" placeholder="Ex: ODP-2024-001">
+                </div>
+                <div class="form-group" style="flex:1; margin-bottom:0;">
+                    <label>Nom du client</label>
+                    <input type="text" id="urgentClient" placeholder="Ex: Renault, France Télé...">
+                </div>
+            </div>
+            <div class="form-group" style="margin-top:14px;">
+                <label>Heure de livraison souhaitée *</label>
+                <input type="time" id="urgentDeliveryTime" required>
+            </div>
+            <div class="form-group">
+                <label>Texte à enregistrer</label>
+                <textarea id="urgentInfos" placeholder="Collez ici le texte à enregistrer..." rows="6"></textarea>
+            </div>
+            <button class="btn" onclick="sendUrgentRequest()" style="background: var(--accent);">🚨 Préparer et envoyer l'email</button>
+        </div>
+    </div>
+
+    <!-- Modal nouveau template email -->
+    <div id="newTemplateModal" class="modal">
+        <div class="modal-content" style="max-width:460px;">
+            <div class="modal-header">
+                <h2>✉️ Nouveau template email</h2>
+                <button class="close-btn" onclick="closeModal('newTemplateModal')">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Nom du template *</label>
+                <input type="text" id="newTplName" placeholder="Ex : Confirmation enregistrement">
+            </div>
+            <div class="form-group">
+                <label>Catégorie *</label>
+                <select id="newTplCategory">
+                    <option value="comedien">🎙️ Emails comédiens</option>
+                    <option value="client">👤 Emails clients</option>
+                    <option value="studio">🏢 Emails studio</option>
+                    <option value="systeme">🔧 Système</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Objet *</label>
+                <input type="text" id="newTplSubject" placeholder="Objet de l'email">
+            </div>
+            <button class="btn" onclick="createNewTemplate()">Créer le template</button>
+        </div>
+    </div>
+
+    <!-- Modal commande studio/manager -->
+    <div id="orderModal" class="modal">
+        <div class="modal-content" style="max-width:560px;">
+            <div class="modal-header">
+                <h2>🛒 Passer une commande</h2>
+                <button class="close-btn" onclick="closeModal('orderModal')">&times;</button>
+            </div>
+
+            <!-- Récap comédiens -->
+            <div style="margin-bottom:var(--s5);">
+                <p style="font-size:.78em;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-bottom:var(--s3);">Comédiens sélectionnés</p>
+                <div id="orderModalRecap" style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r2);padding:var(--s3) var(--s4);max-height:140px;overflow-y:auto;"></div>
+                <p style="margin-top:var(--s2);font-size:.78em;color:var(--teal);">✓ Les emails sont envoyés en copie cachée — chaque comédien ne voit pas les autres.</p>
+            </div>
+
+            <!-- Numéro ODP -->
+            <div class="form-group">
+                <label>Numéro ODP <span style="color:var(--accent);">*</span></label>
+                <input type="text" id="orderODP" placeholder="Ex : ODP-2024-001">
+            </div>
+
+            <!-- Nom du client -->
+            <div class="form-group">
+                <label>Nom du client <span style="color:var(--accent);">*</span></label>
+                <input type="text" id="orderClient" placeholder="Nom du client ou de la marque">
+            </div>
+
+            <!-- Date + Heure de livraison -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--s4);">
+                <div class="form-group">
+                    <label>Date de livraison <span style="color:var(--accent);">*</span></label>
+                    <input type="date" id="orderDeliveryDate">
+                </div>
+                <div class="form-group">
+                    <label>Heure souhaitée <span style="color:var(--accent);">*</span></label>
+                    <input type="time" id="orderDeliveryTime" value="17:00">
+                </div>
+            </div>
+
+            <!-- Texte à enregistrer -->
+            <div class="form-group">
+                <label>Texte à enregistrer</label>
+                <textarea id="orderText" rows="5" placeholder="Collez ici le texte à enregistrer..."></textarea>
+            </div>
+
+            <button class="btn" onclick="sendOrderRequest()" style="background:var(--teal);color:#080810;font-weight:700;">
+                🛒 Passer ma commande
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal envoi sélection client → studio -->
+    <div id="clientBasketModal" class="modal">
+        <div class="modal-content" style="max-width:540px;">
+            <div class="modal-header">
+                <h2>📧 Envoyer ma sélection au studio</h2>
+                <button class="close-btn" onclick="closeModal('clientBasketModal')">&times;</button>
+            </div>
+
+            <!-- Récap comédiens -->
+            <div style="margin-bottom:var(--s5);">
+                <p style="font-size:.82em;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-bottom:var(--s3);">Ma sélection</p>
+                <div id="clientBasketRecap" style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r2);padding:var(--s3) var(--s4);max-height:160px;overflow-y:auto;"></div>
+            </div>
+
+            <!-- Choix du contact studio -->
+            <div class="form-group">
+                <label>Choisir un contact studio *</label>
+                <div id="clientStudioList" style="display:flex;flex-direction:column;gap:var(--s2);max-height:220px;overflow-y:auto;"></div>
+                <input type="hidden" id="clientStudioSelectedEmail">
+                <input type="hidden" id="clientStudioSelectedName">
+            </div>
+
+            <!-- Message optionnel -->
+            <div class="form-group">
+                <label>Message (optionnel)</label>
+                <textarea id="clientBasketMessage" placeholder="Ajoutez un commentaire pour le studio..." rows="3"></textarea>
+            </div>
+
+            <button class="btn" onclick="sendClientSelectionToStudio()" style="background:var(--accent);">
+                📧 Ouvrir dans ma messagerie
+            </button>
+        </div>
+    </div>
+
+    <!-- Écran de chargement -->
+    <div id="loadingScreen" style="
+        position:fixed; inset:0; z-index:9999;
+        background:var(--bg, #0a0a12);
+        display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px;">
+        <span style="font-size:3em;">🎭</span>
+        <div style="color:#e94560; font-size:1.1em; font-weight:600;">Chargement…</div>
+        <div style="width:200px; height:4px; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden;">
+            <div id="loadingBar" style="height:100%; width:0%; background:#e94560; border-radius:2px; transition:width 0.4s ease;"></div>
+        </div>
+        <div id="loadingMsg" style="color:#888; font-size:0.85em;"></div>
+    </div>
+
+    <script>
+    (function() {
+        var v = window.__APP_V__ || String(Date.now());
+        var head = document.head;
+
+        ['css/styles.css', 'css/variables.css'].forEach(function(href) {
+            var link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = href + '?v=' + v;
+            head.appendChild(link);
+        });
+
+        var scripts = ['js/config.js', 'js/supabase-client.js', 'js/database.js', 'js/app.js'];
+        function loadNext(i) {
+            if (i >= scripts.length) {
+                window.__appScriptsReady = true;
+                if (typeof window.__onAppScriptsReady === 'function') {
+                    window.__onAppScriptsReady();
+                }
+                return;
+            }
+            var s = document.createElement('script');
+            s.src = scripts[i] + '?v=' + v;
+            s.onload  = function() { loadNext(i + 1); };
+            s.onerror = function() { console.error('Load error:', scripts[i]); loadNext(i + 1); };
+            document.body.appendChild(s);
+        }
+        loadNext(0);
+    })();
+    </script>
+
+    <!-- Bootstrap asynchrone -->
+    <script>
+    window.__onAppScriptsReady = function() {
+    (async function bootstrap() {
+        const screen  = document.getElementById('loadingScreen');
+        const bar     = document.getElementById('loadingBar');
+        const msg     = document.getElementById('loadingMsg');
+        const setP    = (p, m) => { bar.style.width = p + '%'; msg.textContent = m; };
+
+        try {
+            setP(20, 'Connexion…');
+
+            await SupabaseDB.initSettings();
+            window.applyLogoEverywhere();
+
+            setP(100, 'Prêt !');
+            await new Promise(r => setTimeout(r, 150));
+
+            screen.style.opacity = '0';
+            screen.style.transition = 'opacity 0.25s';
+            setTimeout(() => { screen.style.display = 'none'; }, 280);
+
+            (async function loadFullData() {
+                try {
+                    // 1. Vérifier vue partagée (lien public)
+                    await window.checkSharedView();
+
+                    // 2. Restaurer session existante
+                    const restoredUser = await SupabaseDB.restoreSession();
+                    if (restoredUser) {
+                        window._currentUser = restoredUser;
+                        await SupabaseDB.init();
+                        window.showApp();
+                    }
+
+                    // 3. Polling toutes les 30s pour détecter changements settings/comédiens
+                    (function startPolling() {
+                        var _snapSettings  = '';
+                        var _snapComedians = '';
+                        var _tick = 0;
+                        setInterval(async function() {
+                            if (!window._currentUser) return;
+                            try {
+                                await SupabaseDB.reloadSettings();
+                                var snapS = JSON.stringify(AppState.settings);
+                                if (snapS !== _snapSettings) {
+                                    _snapSettings = snapS;
+                                    window.applyLogoEverywhere();
+                                    window.applyBannerEverywhere();
+                                }
+                                _tick++;
+                                if (_tick % 2 === 0) {
+                                    await Promise.all([
+                                        SupabaseDB.reloadComedians(),
+                                        SupabaseDB.reloadUsers()
+                                    ]);
+                                    var snapC = String(AppState.comedians.length);
+                                    if (snapC !== _snapComedians) {
+                                        _snapComedians = snapC;
+                                        window.refreshCurrentView();
+                                    }
+                                }
+                            } catch(e) {}
+                        }, 30000);
+                    })();
+
+                } catch(err) {
+                    console.error('Erreur chargement données:', err);
+                    const notice = document.createElement('div');
+                    notice.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#c0392b;color:#fff;padding:12px 24px;border-radius:10px;z-index:9999;font-size:0.9em;';
+                    notice.textContent = '⚠️ Impossible de charger les données. Vérifiez votre connexion.';
+                    document.body.appendChild(notice);
+                    setTimeout(() => notice.remove(), 6000);
+                }
+            })();
+
+        } catch (err) {
+            console.error('Bootstrap error:', err);
+            screen.innerHTML = `
+                <div style="text-align:center; max-width:480px; padding:30px; background:#16213e; border-radius:16px; border:1px solid #e94560;">
+                    <div style="font-size:2.5em; margin-bottom:15px;">❌</div>
+                    <h2 style="color:#e94560; margin-bottom:12px;">Erreur de connexion</h2>
+                    <p style="color:#aaa; margin-bottom:15px; line-height:1.6;">${err.message || 'Impossible de se connecter à la base de données.'}</p>
+                    <p style="color:#666; font-size:0.85em; margin-bottom:20px;">Vérifiez que l'URL de l'Edge Function dans <code>js/config.js</code> est correcte et que <code>supabase functions deploy api</code> a bien été exécuté.</p>
+                    <button onclick="location.reload()" style="background:#e94560; color:#fff; border:none; padding:10px 24px; border-radius:8px; cursor:pointer; font-weight:600; font-size:1em;">
+                        Réessayer
+                    </button>
+                </div>`;
+        }
+    })();
+    };
+    if (window.__appScriptsReady) { window.__onAppScriptsReady(); }
+    </script>
+</body>
+</html>

@@ -1148,6 +1148,59 @@ function renderSharedView(comedians, token) {
         window.exitPreviewRole = exitPreviewRole;
         window.getEffectiveRole= getEffectiveRole;
 
+        // Fonctions settings/email — exposées explicitement pour les onclick HTML
+        window.showAdminSection      = showAdminSection;
+        window.showSettingsTab       = showSettingsTab;
+        window.showEmailCategory     = showEmailCategory;
+        window.openTemplateEditor    = openTemplateEditor;
+        window.saveCurrentTemplate   = saveCurrentTemplate;
+        window.resetCurrentTemplate  = resetCurrentTemplate;
+        window.deleteCurrentTemplate = deleteCurrentTemplate;
+        window.openNewTemplateModal  = openNewTemplateModal;
+        window.createNewTemplate     = createNewTemplate;
+        window.insertVarAtCursor     = insertVarAtCursor;
+        window.toggleEmailPreview    = toggleEmailPreview;
+        window.updateEmailPreview    = updateEmailPreview;
+        window.handleLogoUpload      = handleLogoUpload;
+        window.removeLogo            = removeLogo;
+        window.saveStudioName        = saveStudioName;
+        window.loadSettingsPanel     = loadSettingsPanel;
+
+        // Autres fonctions globales
+        window.addAbsenceAdmin                     = addAbsenceAdmin;
+        window.clearLogs                           = clearLogs;
+        window.clearUserSearch                     = clearUserSearch;
+        window.closeModal                          = closeModal;
+        window.confirmAudioUpload                  = confirmAudioUpload;
+        window.copyNewPassword                     = copyNewPassword;
+        window.copyShareLink                       = copyShareLink;
+        window.cycleTheme                          = cycleTheme;
+        window.deleteAudioAdmin                    = deleteAudioAdmin;
+        window.deleteUsersByRole                   = deleteUsersByRole;
+        window.exportUsersCSV                      = exportUsersCSV;
+        window.generateNewPasswordForUser          = generateNewPasswordForUser;
+        window.generateUserPassword                = generateUserPassword;
+        window.logout                              = logout;
+        window.openAdminAddAbsenceModal            = openAdminAddAbsenceModal;
+        window.openAudioUpload                     = openAudioUpload;
+        window.openAudioUploadAdmin                = openAudioUploadAdmin;
+        window.openEditComedianProfile             = openEditComedianProfile;
+        window.openMFTDelivery                     = openMFTDelivery;
+        window.openModal                           = openModal;
+        window.openQuickAbsence                    = openQuickAbsence;
+        window.requestMFTAccess                    = requestMFTAccess;
+        window.resetFiltersClient                  = resetFiltersClient;
+        window.resetFiltersStudio                  = resetFiltersStudio;
+        window.resetUserFilters                    = resetUserFilters;
+        window.saveEditUser                        = saveEditUser;
+        window.selectUserRolePill                  = selectUserRolePill;
+        window.sendClientSelectionToStudio         = sendClientSelectionToStudio;
+        window.sendOrderRequest                    = sendOrderRequest;
+        window.sendStudioSelection                 = sendStudioSelection;
+        window.sendUrgentRequest                   = sendUrgentRequest;
+        window.toggleClientSelectionPanel          = toggleClientSelectionPanel;
+        window.toggleSelectionPanel                = toggleSelectionPanel;
+
         function loadUsers() {
             loadUsersByRole();
         }
@@ -1395,11 +1448,10 @@ function renderSharedView(comedians, token) {
                 const validRoles = ['admin', 'studio', 'manager', 'client', 'comedian'];
                 if (!validRoles.includes(role)) { skipped++; continue; }
                 const plainPwd = Utils.generateSecurePassword(10);
-                const hashed = await hashPassword(plainPwd);
                 const newUser = {
                     username,
                     email: idxEmail >= 0 ? vals[idxEmail] : '',
-                    password: hashed,
+                    _plainPassword: plainPwd, // hash avec sel fait côté serveur
                     role,
                     comedianId: null,
                     active: idxActive < 0 || !vals[idxActive] || vals[idxActive].toLowerCase() !== 'non',
@@ -1634,11 +1686,11 @@ function renderSharedView(comedians, token) {
                     const db = getSupabase();
                     const { error } = await db.auth.updateUser({ password: newPassword });
                     if (error) throw error;
-                    user.password = await hashPassword(newPassword);
+                    user._plainPassword = newPassword; // hash avec sel fait côté serveur
                     await SupabaseDB.upsertUser(user);
                 } else {
                     await SupabaseDB.sendPasswordResetEmail(user.email);
-                    user.password = await hashPassword(newPassword);
+                    user._plainPassword = newPassword; // hash avec sel fait côté serveur
                     await SupabaseDB.upsertUser(user);
                     alert(`✅ Un email de réinitialisation a été envoyé à ${user.email}\n\nL'utilisateur devra cliquer sur le lien pour activer son nouveau mot de passe.`);
                 }
@@ -3608,8 +3660,7 @@ function renderSharedView(comedians, token) {
             let plainPwd;
             if (!user.password) {
                 plainPwd            = Utils.generateSecurePassword(12);
-                user.password       = await hashPassword(plainPwd);
-                user._plainPassword = plainPwd;
+                user._plainPassword = plainPwd; // hash avec sel fait côté serveur
                 await SupabaseDB.upsertUser(user);
                 await broadcastUpdate('users');
             } else if (user._plainPassword) {
@@ -3652,8 +3703,7 @@ function renderSharedView(comedians, token) {
             }
             if (!comedian.password) {
                 plainPwd = Utils.generateSecurePassword(12);
-                comedian.password = await hashPassword(plainPwd);
-                comedian._plainPassword = plainPwd;
+                comedian._plainPassword = plainPwd; // hash avec sel fait côté serveur
             } else {
                 plainPwd = comedian._plainPassword || null;
                 if (!plainPwd) {
